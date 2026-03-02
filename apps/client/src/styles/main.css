@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Markdown rendering inside ADW panels */
+.adw-markdown h1 { font-size: 1.25rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+.adw-markdown h2 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.4rem; }
+.adw-markdown h3 { font-size: 0.95rem; font-weight: 600; margin: 0.5rem 0 0.3rem; }
+.adw-markdown p { margin: 0.4rem 0; line-height: 1.6; }
+.adw-markdown ul, .adw-markdown ol { margin: 0.4rem 0; padding-left: 1.5rem; }
+.adw-markdown ul { list-style: disc; }
+.adw-markdown ol { list-style: decimal; }
+.adw-markdown li { margin: 0.15rem 0; line-height: 1.5; }
+.adw-markdown code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  background-color: var(--theme-bg-quaternary, rgba(0,0,0,0.1));
+}
+.adw-markdown pre {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  background-color: var(--theme-bg-quaternary, rgba(0,0,0,0.1));
+}
+.adw-markdown pre code {
+  padding: 0;
+  background: none;
+}
+.adw-markdown a {
+  color: var(--theme-primary, #3b82f6);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.adw-markdown a:hover { text-decoration-style: solid; }
+.adw-markdown blockquote {
+  margin: 0.4rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--theme-border-secondary, #444);
+  color: var(--theme-text-tertiary, #999);
+}
+.adw-markdown hr {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid var(--theme-border-tertiary, #333);
+}
+.adw-markdown strong { font-weight: 600; }
+.adw-markdown table { border-collapse: collapse; margin: 0.4rem 0; width: 100%; }
+.adw-markdown th, .adw-markdown td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--theme-border-secondary, #444);
+  text-align: left;
+  font-size: 0.85em;
+}
+.adw-markdown th { font-weight: 600; background-color: var(--theme-bg-tertiary, rgba(0,0,0,0.05)); }

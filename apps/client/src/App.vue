@@ -3,11 +3,32 @@
     <!-- Header with Primary Theme Colors -->
     <header class="short:hidden bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary-light)] shadow-lg border-b-2 border-[var(--theme-primary-dark)]">
       <div class="px-3 py-4 mobile:py-1.5 mobile:px-2 flex items-center justify-between mobile:gap-2">
-        <!-- Title Section - Hidden on mobile -->
-        <div class="mobile:hidden">
-          <h1 class="text-2xl font-bold text-white drop-shadow-lg">
+        <!-- Title + Tab Navigation -->
+        <div class="flex items-center gap-4">
+          <h1 class="text-2xl mobile:hidden font-bold text-white drop-shadow-lg">
             Multi-Agent Observability
           </h1>
+          <!-- Tab buttons -->
+          <div class="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
+            <button
+              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-all duration-200"
+              :class="currentView === 'events' ? 'bg-white/25 text-white shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/10'"
+              @click="currentView = 'events'"
+            >
+              Events
+            </button>
+            <button
+              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-all duration-200"
+              :class="currentView === 'adw' ? 'bg-white/25 text-white shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/10'"
+              @click="currentView = 'adw'"
+            >
+              ADW Pipeline
+              <span
+                v-if="adwRuns.length > 0"
+                class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-white/20"
+              >{{ adwRuns.length }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Connection Status -->
@@ -42,8 +63,9 @@
             <span class="text-2xl mobile:text-base">🗑️</span>
           </button>
 
-          <!-- Filters Toggle Button -->
+          <!-- Filters Toggle Button (events view only) -->
           <button
+            v-if="currentView === 'events'"
             @click="showFilters = !showFilters"
             class="p-3 mobile:p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 border border-white/30 hover:border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl"
             :title="showFilters ? 'Hide filters' : 'Show filters'"
@@ -63,51 +85,59 @@
       </div>
     </header>
     
-    <!-- Filters -->
-    <FilterPanel
-      v-if="showFilters"
-      class="short:hidden"
-      :filters="filters"
-      @update:filters="filters = $event"
-    />
-    
-    <!-- Live Pulse Chart -->
-    <LivePulseChart
-      :events="events"
-      :filters="filters"
-      @update-unique-apps="uniqueAppNames = $event"
-      @update-all-apps="allAppNames = $event"
-      @update-time-range="currentTimeRange = $event"
-    />
-
-    <!-- Agent Swim Lane Container (below pulse chart, full width, hidden when empty) -->
-    <div v-if="selectedAgentLanes.length > 0" class="w-full bg-[var(--theme-bg-secondary)] px-3 py-4 mobile:px-2 mobile:py-2 overflow-hidden">
-      <AgentSwimLaneContainer
-        :selected-agents="selectedAgentLanes"
-        :events="events"
-        :time-range="currentTimeRange"
-        @update:selected-agents="selectedAgentLanes = $event"
+    <!-- Events View -->
+    <template v-if="currentView === 'events'">
+      <!-- Filters -->
+      <FilterPanel
+        v-if="showFilters"
+        class="short:hidden"
+        :filters="filters"
+        @update:filters="filters = $event"
       />
-    </div>
-    
-    <!-- Timeline -->
-    <div class="flex flex-col flex-1 overflow-hidden">
-      <EventTimeline
+
+      <!-- Live Pulse Chart -->
+      <LivePulseChart
         :events="events"
         :filters="filters"
-        :unique-app-names="uniqueAppNames"
-        :all-app-names="allAppNames"
-        v-model:stick-to-bottom="stickToBottom"
-        @select-agent="toggleAgentLane"
+        @update-unique-apps="uniqueAppNames = $event"
+        @update-all-apps="allAppNames = $event"
+        @update-time-range="currentTimeRange = $event"
       />
-    </div>
-    
-    <!-- Stick to bottom button -->
-    <StickScrollButton
-      class="short:hidden"
-      :stick-to-bottom="stickToBottom"
-      @toggle="stickToBottom = !stickToBottom"
-    />
+
+      <!-- Agent Swim Lane Container (below pulse chart, full width, hidden when empty) -->
+      <div v-if="selectedAgentLanes.length > 0" class="w-full bg-[var(--theme-bg-secondary)] px-3 py-4 mobile:px-2 mobile:py-2 overflow-hidden">
+        <AgentSwimLaneContainer
+          :selected-agents="selectedAgentLanes"
+          :events="events"
+          :time-range="currentTimeRange"
+          @update:selected-agents="selectedAgentLanes = $event"
+        />
+      </div>
+
+      <!-- Timeline -->
+      <div class="flex flex-col flex-1 overflow-hidden">
+        <EventTimeline
+          :events="events"
+          :filters="filters"
+          :unique-app-names="uniqueAppNames"
+          :all-app-names="allAppNames"
+          v-model:stick-to-bottom="stickToBottom"
+          @select-agent="toggleAgentLane"
+        />
+      </div>
+
+      <!-- Stick to bottom button -->
+      <StickScrollButton
+        class="short:hidden"
+        :stick-to-bottom="stickToBottom"
+        @toggle="stickToBottom = !stickToBottom"
+      />
+    </template>
+
+    <!-- ADW Pipeline View -->
+    <template v-else-if="currentView === 'adw'">
+      <AdwDashboard />
+    </template>
     
     <!-- Error message -->
     <div
@@ -141,6 +171,7 @@ import type { TimeRange } from './types';
 import { useWebSocket } from './composables/useWebSocket';
 import { useThemes } from './composables/useThemes';
 import { useEventColors } from './composables/useEventColors';
+import { useAdwData } from './composables/useAdwData';
 import EventTimeline from './components/EventTimeline.vue';
 import FilterPanel from './components/FilterPanel.vue';
 import StickScrollButton from './components/StickScrollButton.vue';
@@ -148,10 +179,20 @@ import LivePulseChart from './components/LivePulseChart.vue';
 import ThemeManager from './components/ThemeManager.vue';
 import ToastNotification from './components/ToastNotification.vue';
 import AgentSwimLaneContainer from './components/AgentSwimLaneContainer.vue';
+import AdwDashboard from './components/AdwDashboard.vue';
 import { WS_URL } from './config';
 
 // WebSocket connection
-const { events, isConnected, error, clearEvents } = useWebSocket(WS_URL);
+const { events, adwRuns, isConnected, error, clearEvents } = useWebSocket(WS_URL);
+
+// ADW data — feed WebSocket ADW messages into the composable
+const { handleAdwMessage } = useAdwData();
+watch(adwRuns, (newRuns) => {
+  handleAdwMessage('adw_update', newRuns);
+}, { immediate: true });
+
+// View toggle
+const currentView = ref<'events' | 'adw'>('events');
 
 // Theme management (sets up theme system)
 useThemes();

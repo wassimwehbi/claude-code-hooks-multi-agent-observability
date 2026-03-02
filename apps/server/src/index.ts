@@ -1,15 +1,16 @@
 import { initDatabase, insertEvent, getFilterOptions, getRecentEvents, updateEventHITLResponse } from './db';
 import type { HookEvent, HumanInTheLoopResponse } from './types';
-import { 
-  createTheme, 
-  updateThemeById, 
-  getThemeById, 
-  searchThemes, 
-  deleteThemeById, 
-  exportThemeById, 
+import {
+  createTheme,
+  updateThemeById,
+  getThemeById,
+  searchThemes,
+  deleteThemeById,
+  exportThemeById,
   importTheme,
-  getThemeStats 
+  getThemeStats
 } from './theme';
+import { scanAll, getRunDetail, getStats, startWatcher, getCachedRuns } from './adw-watcher';
 
 // Initialize database
 initDatabase();
@@ -229,8 +230,85 @@ const server = Bun.serve({
       }
     }
 
+    // ADW API endpoints
+
+    // GET /api/adw/runs - List all ADW runs
+    if (url.pathname === '/api/adw/runs' && req.method === 'GET') {
+      const runs = await scanAll();
+      return new Response(JSON.stringify(runs), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // GET /api/adw/runs/:id - Get detail for a specific ADW run
+    if (url.pathname.match(/^\/api\/adw\/runs\/[^/]+$/) && req.method === 'GET') {
+      const adwId = url.pathname.split('/')[4];
+      const detail = await getRunDetail(adwId);
+      if (!detail) {
+        return new Response(JSON.stringify({ error: 'ADW run not found' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify(detail), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // GET /api/adw/screenshots?path=<absolute-path> - Serve a local screenshot file
+    if (url.pathname === '/api/adw/screenshots' && req.method === 'GET') {
+      const filePath = url.searchParams.get('path');
+      if (!filePath) {
+        return new Response(JSON.stringify({ error: 'Missing path parameter' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Security: only serve files under the known worktrees directory
+      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+      if (!filePath.startsWith(WORKTREES_BASE)) {
+        return new Response(JSON.stringify({ error: 'Path not allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const file = Bun.file(filePath);
+        if (!(await file.exists())) {
+          return new Response(JSON.stringify({ error: 'File not found' }), {
+            status: 404,
+            headers: { ...headers, 'Content-Type': 'application/json' }
+          });
+        }
+
+        return new Response(file, {
+          headers: {
+            ...headers,
+            'Content-Type': file.type || 'image/png',
+            'Cache-Control': 'public, max-age=3600',
+          }
+        });
+      } catch (error) {
+        console.error('[ADW] Screenshot serve error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to read file' }), {
+          status: 500,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // GET /api/adw/stats - Get aggregate ADW stats
+    if (url.pathname === '/api/adw/stats' && req.method === 'GET') {
+      const stats = getStats();
+      return new Response(JSON.stringify(stats), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Theme API endpoints
-    
+
     // POST /api/themes - Create a new theme
     if (url.pathname === '/api/themes' && req.method === 'POST') {
       try {
@@ -423,10 +501,14 @@ const server = Bun.serve({
     open(ws) {
       console.log('WebSocket client connected');
       wsClients.add(ws);
-      
+
       // Send recent events on connection
       const events = getRecentEvents(300);
       ws.send(JSON.stringify({ type: 'initial', data: events }));
+
+      // Send current ADW runs
+      const adwRuns = getCachedRuns();
+      ws.send(JSON.stringify({ type: 'adw_initial', data: adwRuns }));
     },
     
     message(ws, message) {
@@ -446,6 +528,18 @@ const server = Bun.serve({
   }
 });
 
+// Start ADW file watcher — polls agents directory and broadcasts changes
+startWatcher((message) => {
+  wsClients.forEach(client => {
+    try {
+      client.send(message);
+    } catch (err) {
+      wsClients.delete(client);
+    }
+  });
+});
+
 console.log(`🚀 Server running on http://localhost:${server.port}`);
 console.log(`📊 WebSocket endpoint: ws://localhost:${server.port}/stream`);
 console.log(`📮 POST events to: http://localhost:${server.port}/events`);
+console.log(`🤖 ADW Pipeline: http://localhost:${server.port}/api/adw/runs`);
