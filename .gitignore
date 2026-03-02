@@ -272,3 +272,6 @@ ai_docs/haiku45/*
 trees/
 
 deep_docs
+
+# Test fixtures
+.test-fixtures/

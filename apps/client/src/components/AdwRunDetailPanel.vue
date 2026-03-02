@@ -41,6 +41,66 @@
         </h3>
       </div>
 
+      <!-- State Banner -->
+      <div
+        v-if="detail.is_blocked || detail.status === 'blocked' || detail.status === 'failed'"
+        class="rounded-lg border-2 p-3 space-y-2"
+        :style="{
+          borderColor: '#ef4444',
+          backgroundColor: '#ef444412',
+        }"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-bold" style="color: #ef4444">
+            {{ detail.status === 'failed' ? 'Failed' : 'Blocked' }}
+          </span>
+          <AdwStatusBadge v-if="detail.status" :status="detail.status" />
+          <span v-if="detail.phase" class="text-xs" :style="{ color: 'var(--theme-text-tertiary)' }">
+            @ {{ detail.phase.replace(/_/g, ' ') }}
+          </span>
+        </div>
+        <ul v-if="detail.blockers.length > 0" class="space-y-1">
+          <li
+            v-for="(blocker, i) in detail.blockers"
+            :key="i"
+            class="text-xs pl-3 border-l-2"
+            :style="{ color: 'var(--theme-text-secondary)', borderColor: '#ef4444' }"
+          >
+            {{ blocker }}
+          </li>
+        </ul>
+      </div>
+      <div
+        v-else
+        class="rounded-lg border p-3 flex items-center gap-2"
+        :style="{
+          borderColor: 'var(--theme-border-secondary)',
+          backgroundColor: 'var(--theme-bg-tertiary)',
+        }"
+      >
+        <AdwStatusBadge v-if="detail.status" :status="detail.status" />
+        <span v-if="detail.phase" class="text-xs" :style="{ color: 'var(--theme-text-tertiary)' }">
+          @ {{ detail.phase.replace(/_/g, ' ') }}
+        </span>
+      </div>
+
+      <!-- Spec Deep Link -->
+      <div v-if="detail.spec_path">
+        <SectionLabel>Spec</SectionLabel>
+        <button
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono hover:border-[var(--theme-primary)] transition-colors cursor-pointer"
+          :style="{
+            borderColor: 'var(--theme-border-secondary)',
+            backgroundColor: 'var(--theme-bg-tertiary)',
+            color: 'var(--theme-primary)',
+          }"
+          @click="openSpecModal"
+        >
+          <span>{{ detail.spec_path.split('/').pop() }}</span>
+          <span class="text-[10px] opacity-60">View</span>
+        </button>
+      </div>
+
       <!-- Full phase stepper -->
       <div>
         <SectionLabel>Pipeline Progress</SectionLabel>
@@ -246,6 +306,14 @@
         @close="agentModalOpen = false"
       />
 
+      <!-- Spec modal -->
+      <AdwSpecModal
+        :is-open="specModalOpen"
+        :spec-path="specModalPath"
+        :bug-number="detail.bug_number"
+        @close="specModalOpen = false"
+      />
+
       <!-- Blockers -->
       <div v-if="detail.blockers.length > 0">
         <SectionLabel>Blockers ({{ detail.blockers.length }})</SectionLabel>
@@ -295,7 +363,6 @@
       <div class="text-xs space-y-1" :style="{ color: 'var(--theme-text-tertiary)' }">
         <div>ADW ID: <span class="font-mono">{{ detail.adw_id }}</span></div>
         <div v-if="detail.last_pr_check_at">Last check: {{ detail.last_pr_check_at }}</div>
-        <div v-if="detail.spec_path">Spec: <span class="font-mono">{{ detail.spec_path }}</span></div>
         <div v-if="detail.e2e_test_path">E2E: <span class="font-mono">{{ detail.e2e_test_path }}</span></div>
       </div>
     </div>
@@ -314,6 +381,7 @@ import AdwReviewFeedback from './AdwReviewFeedback.vue';
 import AdwFeedbackModal from './AdwFeedbackModal.vue';
 import AdwAgentModal from './AdwAgentModal.vue';
 import AdwImageLightbox from './AdwImageLightbox.vue';
+import AdwSpecModal from './AdwSpecModal.vue';
 
 const props = defineProps<{
   detail: AdwRunDetail;
@@ -366,6 +434,15 @@ const agentModalIndex = ref(0);
 const openAgentModal = (index: number) => {
   agentModalIndex.value = index;
   agentModalOpen.value = true;
+};
+
+// Spec modal state
+const specModalOpen = ref(false);
+const specModalPath = ref<string | null>(null);
+
+const openSpecModal = () => {
+  specModalPath.value = props.detail.spec_path;
+  specModalOpen.value = true;
 };
 
 // Functional sub-components

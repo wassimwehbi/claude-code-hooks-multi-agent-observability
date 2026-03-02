@@ -53,8 +53,16 @@
           </td>
           <!-- Status -->
           <td class="px-3 py-2">
-            <AdwStatusBadge v-if="run.status" :status="run.status" />
-            <span v-else :style="{ color: 'var(--theme-text-tertiary)' }">-</span>
+            <div class="flex items-center gap-1.5">
+              <AdwStatusBadge v-if="run.status" :status="run.status" />
+              <span v-else :style="{ color: 'var(--theme-text-tertiary)' }">-</span>
+              <span
+                v-if="run.is_blocked"
+                class="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                style="background-color: #ef4444"
+                :title="run.blockers[0] || 'Blocked'"
+              />
+            </div>
           </td>
           <!-- PR # -->
           <td class="px-3 py-2 font-mono">

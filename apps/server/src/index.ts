@@ -310,6 +310,75 @@ const server = Bun.serve({
       }
     }
 
+    // GET /api/adw/specs?spec=<relative-path>&bug=<number> - Serve a local markdown spec file
+    // spec_path in ADW state is relative (e.g. "specs/bug-852-foo.md"), resolved against the bug worktree
+    if (url.pathname === '/api/adw/specs' && req.method === 'GET') {
+      const specParam = url.searchParams.get('spec');
+      const bugParam = url.searchParams.get('bug');
+      if (!specParam) {
+        return new Response(JSON.stringify({ error: 'Missing spec parameter' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (!specParam.toLowerCase().endsWith('.md')) {
+        return new Response(JSON.stringify({ error: 'Only .md files are allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+      const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/wassim/git/workflow-designer/agents';
+
+      // Build candidate paths: try bug worktree first, then agents dir
+      const candidates: string[] = [];
+      if (bugParam) {
+        candidates.push(resolve(WORKTREES_BASE, 'bug', bugParam, specParam));
+      }
+      candidates.push(resolve(ADW_AGENTS_PATH, specParam));
+
+      let resolvedPath: string | null = null;
+      for (const candidate of candidates) {
+        // Security: must stay within allowed directories
+        if (!candidate.startsWith(WORKTREES_BASE + '/') && !candidate.startsWith(ADW_AGENTS_PATH + '/')) {
+          continue;
+        }
+        const f = Bun.file(candidate);
+        if (await f.exists()) {
+          resolvedPath = candidate;
+          break;
+        }
+      }
+
+      if (!resolvedPath) {
+        return new Response(JSON.stringify({ error: 'Spec file not found' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const content = await Bun.file(resolvedPath).text();
+        const filename = resolvedPath.split('/').pop() || 'spec.md';
+
+        return new Response(JSON.stringify({ content, filename }), {
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60',
+          }
+        });
+      } catch (error) {
+        console.error('[ADW] Spec serve error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to read file' }), {
+          status: 500,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // GET /api/adw/stats - Get aggregate ADW stats
     if (url.pathname === '/api/adw/stats' && req.method === 'GET') {
       const stats = getStats();
