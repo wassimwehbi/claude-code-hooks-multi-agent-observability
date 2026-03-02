@@ -191,9 +191,19 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
 
       let prompt: string | null = null;
       let outputSize = 0;
+      let dirMtime = 0;
+
+      // Get directory mtime for execution-order sorting
+      const dirPath = join(adwDir, entry.name);
+      try {
+        const s = await stat(dirPath);
+        dirMtime = s.mtimeMs;
+      } catch {
+        // fallback to 0
+      }
 
       // Try to read prompt
-      const promptPath = join(adwDir, entry.name, 'prompts', 'bug_triage.txt');
+      const promptPath = join(dirPath, 'prompts', 'bug_triage.txt');
       try {
         prompt = await readFile(promptPath, 'utf-8');
       } catch {
@@ -201,7 +211,7 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
       }
 
       // Get raw_output size
-      const outputPath = join(adwDir, entry.name, 'raw_output.json');
+      const outputPath = join(dirPath, 'raw_output.json');
       try {
         const s = await stat(outputPath);
         outputSize = s.size;
@@ -213,14 +223,15 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
         name: entry.name,
         prompt,
         outputSizeBytes: outputSize,
+        startedAt: dirMtime,
       });
     }
   } catch {
     // Failed to read agent dirs
   }
 
-  // Sort agents by name for consistent ordering
-  agents.sort((a, b) => a.name.localeCompare(b.name));
+  // Sort agents by execution order (directory modification time)
+  agents.sort((a, b) => a.startedAt - b.startedAt);
 
   // Discover local screenshots
   const localScreenshots: LocalScreenshot[] = state.bug_number != null

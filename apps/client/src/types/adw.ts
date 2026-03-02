@@ -64,6 +64,7 @@ export interface AgentArtifact {
   name: string;
   prompt: string | null;
   outputSizeBytes: number;
+  startedAt: number;
 }
 
 export interface AdwRunSummary {

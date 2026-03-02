@@ -64,6 +64,7 @@ export interface AgentArtifact {
   name: string;
   prompt: string | null;
   outputSizeBytes: number;
+  startedAt: number; // directory mtime in ms — used for execution-order sorting
 }
 
 /** Light summary used in the table view — read from adw_state.json */
