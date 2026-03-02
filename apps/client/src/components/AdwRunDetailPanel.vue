@@ -202,11 +202,15 @@
         <SectionLabel>Agent Execution Timeline ({{ detail.agents.length }})</SectionLabel>
         <div class="space-y-1">
           <div
-            v-for="agent in detail.agents"
+            v-for="(agent, i) in detail.agents"
             :key="agent.name"
-            class="flex items-center gap-2 p-2 rounded border text-xs"
+            class="flex items-center gap-2 p-2 rounded border text-xs cursor-pointer hover:border-[var(--theme-primary)] transition-colors"
             :style="{ borderColor: 'var(--theme-border-tertiary)', backgroundColor: 'var(--theme-bg-tertiary)' }"
+            @click="openAgentModal(i)"
           >
+            <span class="text-[10px] font-mono w-4 text-center" :style="{ color: 'var(--theme-text-tertiary)' }">
+              {{ i + 1 }}
+            </span>
             <span class="font-mono font-medium min-w-0 truncate flex-1" :style="{ color: 'var(--theme-text-primary)' }">
               {{ agent.name }}
             </span>
@@ -220,6 +224,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Agent modal -->
+      <AdwAgentModal
+        :is-open="agentModalOpen"
+        :agents="detail.agents"
+        :start-index="agentModalIndex"
+        @close="agentModalOpen = false"
+      />
 
       <!-- Blockers -->
       <div v-if="detail.blockers.length > 0">
@@ -287,6 +299,7 @@ import AdwPhaseStepper from './AdwPhaseStepper.vue';
 import AdwStatusBadge from './AdwStatusBadge.vue';
 import AdwReviewFeedback from './AdwReviewFeedback.vue';
 import AdwFeedbackModal from './AdwFeedbackModal.vue';
+import AdwAgentModal from './AdwAgentModal.vue';
 import AdwImageLightbox from './AdwImageLightbox.vue';
 
 const props = defineProps<{
@@ -331,6 +344,15 @@ const feedbackModalIndex = ref(0);
 const openFeedbackModal = (index: number) => {
   feedbackModalIndex.value = index;
   feedbackModalOpen.value = true;
+};
+
+// Agent modal state
+const agentModalOpen = ref(false);
+const agentModalIndex = ref(0);
+
+const openAgentModal = (index: number) => {
+  agentModalIndex.value = index;
+  agentModalOpen.value = true;
 };
 
 const formatBytes = (bytes: number): string => {
