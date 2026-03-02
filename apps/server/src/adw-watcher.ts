@@ -210,13 +210,51 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
         // no prompt file
       }
 
-      // Get raw_output size
+      // Read raw_output.json for size and result event
       const outputPath = join(dirPath, 'raw_output.json');
+      let costUsd: number | null = null;
+      let durationMs: number | null = null;
+      let durationApiMs: number | null = null;
+      let numTurns: number | null = null;
+      let model: string | null = null;
+      let outputTokens: number | null = null;
+      let cacheReadTokens: number | null = null;
+      let isError = false;
+      let stopReason: string | null = null;
+
       try {
         const s = await stat(outputPath);
         outputSize = s.size;
+
+        // Parse to extract the result event (last event with type=result)
+        const rawOutput = await readJson<any[]>(outputPath);
+        if (rawOutput) {
+          for (let i = rawOutput.length - 1; i >= 0; i--) {
+            const ev = rawOutput[i];
+            if (ev?.type === 'result') {
+              costUsd = ev.total_cost_usd ?? null;
+              durationMs = ev.duration_ms ?? null;
+              durationApiMs = ev.duration_api_ms ?? null;
+              numTurns = ev.num_turns ?? null;
+              isError = ev.is_error ?? false;
+              stopReason = ev.stop_reason ?? null;
+              // Model from modelUsage keys
+              const mu = ev.modelUsage;
+              if (mu && typeof mu === 'object') {
+                model = Object.keys(mu)[0] ?? null;
+              }
+              // Token usage
+              const usage = ev.usage;
+              if (usage && typeof usage === 'object') {
+                outputTokens = usage.output_tokens ?? null;
+                cacheReadTokens = usage.cache_read_input_tokens ?? null;
+              }
+              break;
+            }
+          }
+        }
       } catch {
-        // no output file
+        // no output file or parse error
       }
 
       agents.push({
@@ -224,6 +262,15 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
         prompt,
         outputSizeBytes: outputSize,
         startedAt: dirMtime,
+        costUsd,
+        durationMs,
+        durationApiMs,
+        numTurns,
+        model,
+        outputTokens,
+        cacheReadTokens,
+        isError,
+        stopReason,
       });
     }
   } catch {

@@ -215,12 +215,25 @@
               {{ agent.name }}
             </span>
             <span
-              v-if="agent.outputSizeBytes > 0"
-              class="whitespace-nowrap"
+              v-if="agent.isError"
+              class="px-1 rounded text-[10px] font-medium"
+              :style="{ color: '#ef4444', backgroundColor: '#ef444422' }"
+            >FAIL</span>
+            <span
+              v-if="agent.model"
+              class="text-[10px] whitespace-nowrap"
               :style="{ color: 'var(--theme-text-tertiary)' }"
-            >
-              {{ formatBytes(agent.outputSizeBytes) }}
-            </span>
+            >{{ agent.model.replace('claude-', '').replace(/-/g, ' ') }}</span>
+            <span
+              v-if="agent.costUsd != null"
+              class="text-[10px] font-mono whitespace-nowrap"
+              :style="{ color: 'var(--theme-text-tertiary)' }"
+            >${{ agent.costUsd.toFixed(2) }}</span>
+            <span
+              v-if="agent.durationMs != null"
+              class="text-[10px] font-mono whitespace-nowrap"
+              :style="{ color: 'var(--theme-text-tertiary)' }"
+            >{{ Math.round(agent.durationMs / 1000) }}s</span>
           </div>
         </div>
       </div>
@@ -353,12 +366,6 @@ const agentModalIndex = ref(0);
 const openAgentModal = (index: number) => {
   agentModalIndex.value = index;
   agentModalOpen.value = true;
-};
-
-const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 // Functional sub-components

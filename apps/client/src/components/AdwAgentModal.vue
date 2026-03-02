@@ -66,34 +66,48 @@
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-5 space-y-4">
-          <!-- Metrics row -->
-          <div class="flex gap-4">
-            <div
-              class="flex-1 rounded-lg border p-3"
-              :style="{ borderColor: 'var(--theme-border-secondary)', backgroundColor: 'var(--theme-bg-tertiary)' }"
-            >
-              <div class="text-[10px] uppercase tracking-wider mb-1" :style="{ color: 'var(--theme-text-tertiary)' }">Started</div>
-              <div class="text-sm font-mono" :style="{ color: 'var(--theme-text-primary)' }">
-                {{ formatTime(currentAgent.startedAt) }}
-              </div>
+          <!-- Error banner -->
+          <div
+            v-if="currentAgent.isError"
+            class="px-3 py-2 rounded-lg text-xs font-medium"
+            :style="{ backgroundColor: '#ef444422', color: '#ef4444', border: '1px solid #ef444444' }"
+          >
+            Agent failed{{ currentAgent.stopReason ? ` — ${currentAgent.stopReason}` : '' }}
+          </div>
+
+          <!-- Primary metrics -->
+          <div class="grid grid-cols-3 gap-3">
+            <MetricCard label="Cost" :value="currentAgent.costUsd != null ? `$${currentAgent.costUsd.toFixed(2)}` : '-'" />
+            <MetricCard label="Duration" :value="currentAgent.durationMs != null ? formatDuration(currentAgent.durationMs) : '-'" />
+            <MetricCard label="Model" :value="currentAgent.model ? formatModel(currentAgent.model) : '-'" />
+          </div>
+
+          <!-- Secondary metrics -->
+          <div class="grid grid-cols-4 gap-3">
+            <MetricCard label="Turns" :value="currentAgent.numTurns != null ? String(currentAgent.numTurns) : '-'" />
+            <MetricCard label="Output Tokens" :value="currentAgent.outputTokens != null ? formatNumber(currentAgent.outputTokens) : '-'" />
+            <MetricCard label="Cache Read" :value="currentAgent.cacheReadTokens != null ? formatNumber(currentAgent.cacheReadTokens) : '-'" />
+            <MetricCard label="File Size" :value="formatBytes(currentAgent.outputSizeBytes)" />
+          </div>
+
+          <!-- Timing breakdown -->
+          <div v-if="currentAgent.durationMs != null && currentAgent.durationApiMs != null">
+            <div class="text-[10px] uppercase tracking-wider mb-1.5" :style="{ color: 'var(--theme-text-tertiary)' }">
+              Time Breakdown
             </div>
-            <div
-              class="flex-1 rounded-lg border p-3"
-              :style="{ borderColor: 'var(--theme-border-secondary)', backgroundColor: 'var(--theme-bg-tertiary)' }"
-            >
-              <div class="text-[10px] uppercase tracking-wider mb-1" :style="{ color: 'var(--theme-text-tertiary)' }">Duration</div>
-              <div class="text-sm font-mono" :style="{ color: 'var(--theme-text-primary)' }">
-                {{ duration }}
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-3 rounded-full overflow-hidden" :style="{ backgroundColor: 'var(--theme-bg-quaternary)' }">
+                <div
+                  class="h-full rounded-full"
+                  :style="{
+                    width: `${(currentAgent.durationApiMs / currentAgent.durationMs) * 100}%`,
+                    backgroundColor: '#3b82f6',
+                  }"
+                />
               </div>
-            </div>
-            <div
-              class="flex-1 rounded-lg border p-3"
-              :style="{ borderColor: 'var(--theme-border-secondary)', backgroundColor: 'var(--theme-bg-tertiary)' }"
-            >
-              <div class="text-[10px] uppercase tracking-wider mb-1" :style="{ color: 'var(--theme-text-tertiary)' }">Output</div>
-              <div class="text-sm font-mono" :style="{ color: 'var(--theme-text-primary)' }">
-                {{ formatBytes(currentAgent.outputSizeBytes) }}
-              </div>
+              <span class="text-[10px] font-mono whitespace-nowrap" :style="{ color: 'var(--theme-text-tertiary)' }">
+                API: {{ formatDuration(currentAgent.durationApiMs) }} / Total: {{ formatDuration(currentAgent.durationMs) }}
+              </span>
             </div>
           </div>
 
@@ -110,6 +124,11 @@
                 color: 'var(--theme-text-secondary)',
               }"
             >{{ currentAgent.prompt }}</div>
+          </div>
+
+          <!-- Start time -->
+          <div class="text-xs" :style="{ color: 'var(--theme-text-tertiary)' }">
+            Started: {{ formatTime(currentAgent.startedAt) }}
           </div>
 
           <!-- Pipeline position -->
@@ -140,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { h, ref, computed, watch, nextTick } from 'vue';
 import type { AgentArtifact } from '../types/adw';
 
 const props = defineProps<{
@@ -157,16 +176,6 @@ const currentIndex = ref(props.startIndex ?? 0);
 const backdrop = ref<HTMLElement | null>(null);
 
 const currentAgent = computed(() => props.agents[currentIndex.value] ?? props.agents[0]);
-
-// Compute duration as diff to next agent's startedAt (or "last" for the final one)
-const duration = computed(() => {
-  const cur = currentAgent.value;
-  const nextAgent = props.agents[currentIndex.value + 1];
-  if (!cur.startedAt) return '-';
-  if (!nextAgent?.startedAt) return 'last step';
-  const diffMs = nextAgent.startedAt - cur.startedAt;
-  return formatDuration(diffMs);
-});
 
 // Role color based on agent name prefix
 const ROLE_COLORS: Record<string, string> = {
@@ -245,4 +254,33 @@ const formatDuration = (ms: number): string => {
   const hr = Math.floor(min / 60);
   return `${hr}h ${min % 60}m`;
 };
+
+const formatNumber = (n: number): string => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+};
+
+const formatModel = (m: string): string => {
+  // "claude-opus-4-6" → "Opus 4.6"
+  const match = m.match(/claude-(\w+)-(\d+)-(\d+)/);
+  if (match) return `${match[1].charAt(0).toUpperCase() + match[1].slice(1)} ${match[2]}.${match[3]}`;
+  return m;
+};
+
+// Functional metric card sub-component
+const MetricCard = (cardProps: { label: string; value: string }) =>
+  h('div', {
+    class: 'rounded-lg border p-3',
+    style: { borderColor: 'var(--theme-border-secondary)', backgroundColor: 'var(--theme-bg-tertiary)' },
+  }, [
+    h('div', {
+      class: 'text-[10px] uppercase tracking-wider mb-1',
+      style: { color: 'var(--theme-text-tertiary)' },
+    }, cardProps.label),
+    h('div', {
+      class: 'text-sm font-mono',
+      style: { color: 'var(--theme-text-primary)' },
+    }, cardProps.value),
+  ]);
 </script>

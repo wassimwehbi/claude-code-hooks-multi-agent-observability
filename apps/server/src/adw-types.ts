@@ -65,6 +65,16 @@ export interface AgentArtifact {
   prompt: string | null;
   outputSizeBytes: number;
   startedAt: number; // directory mtime in ms — used for execution-order sorting
+  // Extracted from raw_output.json result event
+  costUsd: number | null;
+  durationMs: number | null;
+  durationApiMs: number | null;
+  numTurns: number | null;
+  model: string | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  isError: boolean;
+  stopReason: string | null;
 }
 
 /** Light summary used in the table view — read from adw_state.json */

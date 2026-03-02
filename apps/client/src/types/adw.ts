@@ -65,6 +65,15 @@ export interface AgentArtifact {
   prompt: string | null;
   outputSizeBytes: number;
   startedAt: number;
+  costUsd: number | null;
+  durationMs: number | null;
+  durationApiMs: number | null;
+  numTurns: number | null;
+  model: string | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  isError: boolean;
+  stopReason: string | null;
 }
 
 export interface AdwRunSummary {
