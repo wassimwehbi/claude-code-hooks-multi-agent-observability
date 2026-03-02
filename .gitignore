@@ -266,6 +266,7 @@ ai_docs/haiku45/*
 
 # Claude Code session data
 .claude/data/
+**/.claude/
 
 
 trees/
