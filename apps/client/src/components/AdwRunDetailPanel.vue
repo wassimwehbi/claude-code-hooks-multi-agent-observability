@@ -60,31 +60,48 @@
       </div>
 
       <!-- PR Section -->
-      <div v-if="detail.pr_number">
+      <div v-if="detail.pr_number || expectsPR">
         <SectionLabel>Pull Request</SectionLabel>
         <div
           class="rounded-lg border p-3 space-y-2"
-          :style="{ borderColor: 'var(--theme-border-secondary)', backgroundColor: 'var(--theme-bg-tertiary)' }"
+          :style="{
+            borderColor: detail.pr_number ? 'var(--theme-border-secondary)' : 'var(--theme-accent-warning)',
+            backgroundColor: 'var(--theme-bg-tertiary)',
+          }"
         >
-          <div class="flex items-center gap-2">
-            <a
-              :href="detail.pr_url || `${GITHUB_REPO_URL}/pull/${detail.pr_number}`"
-              target="_blank"
-              rel="noopener"
-              class="font-mono font-bold underline decoration-dotted hover:decoration-solid"
-              :style="{ color: 'var(--theme-primary)' }"
-            >PR #{{ detail.pr_number }}</a>
-            <span
-              v-if="detail.pr_state"
-              class="px-1.5 py-0.5 rounded text-xs font-medium"
-              :style="{ color: getPrStateColor(detail.pr_state), backgroundColor: getPrStateColor(detail.pr_state) + '22' }"
-            >
-              {{ detail.pr_state }}
-            </span>
-          </div>
-          <div v-if="detail.branch_name" class="text-xs font-mono" :style="{ color: 'var(--theme-text-tertiary)' }">
-            {{ detail.branch_name }}
-          </div>
+          <!-- Has a PR -->
+          <template v-if="detail.pr_number">
+            <div class="flex items-center gap-2">
+              <a
+                :href="detail.pr_url || `${GITHUB_REPO_URL}/pull/${detail.pr_number}`"
+                target="_blank"
+                rel="noopener"
+                class="font-mono font-bold underline decoration-dotted hover:decoration-solid"
+                :style="{ color: 'var(--theme-primary)' }"
+              >PR #{{ detail.pr_number }}</a>
+              <span
+                v-if="detail.pr_state"
+                class="px-1.5 py-0.5 rounded text-xs font-medium"
+                :style="{ color: getPrStateColor(detail.pr_state), backgroundColor: getPrStateColor(detail.pr_state) + '22' }"
+              >
+                {{ detail.pr_state }}
+              </span>
+            </div>
+            <div v-if="detail.branch_name" class="text-xs font-mono" :style="{ color: 'var(--theme-text-tertiary)' }">
+              {{ detail.branch_name }}
+            </div>
+          </template>
+          <!-- Phase expects a PR but none exists -->
+          <template v-else>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium" :style="{ color: 'var(--theme-accent-warning)' }">
+                No PR found — phase is "{{ detail.phase }}" but no PR number was recorded
+              </span>
+            </div>
+            <div v-if="detail.branch_name" class="text-xs font-mono" :style="{ color: 'var(--theme-text-tertiary)' }">
+              Branch: {{ detail.branch_name }}
+            </div>
+          </template>
         </div>
       </div>
 
@@ -282,6 +299,10 @@ defineEmits<{
 
 const { getPrStateColor } = useAdwPhaseColors();
 const limits = DEFAULT_CIRCUIT_BREAKER_LIMITS;
+
+// Phases where a PR should exist
+const PR_PHASES = new Set(['pr_creation', 'feedback_iteration', 'pr_monitoring', 'done']);
+const expectsPR = computed(() => props.detail.phase != null && PR_PHASES.has(props.detail.phase));
 
 const screenshotUrl = (path: string): string => {
   return `${API_BASE_URL}/api/adw/screenshots?path=${encodeURIComponent(path)}`;
