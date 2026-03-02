@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { initDatabase, insertEvent, getFilterOptions, getRecentEvents, updateEventHITLResponse } from './db';
 import type { HookEvent, HumanInTheLoopResponse } from './types';
 import {
@@ -265,17 +266,27 @@ const server = Bun.serve({
         });
       }
 
-      // Security: only serve files under the known worktrees directory
+      // Security: resolve to canonical path, then verify it's under the allowed directory
       const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
-      if (!filePath.startsWith(WORKTREES_BASE)) {
+      const resolvedPath = resolve(filePath);
+      if (!resolvedPath.startsWith(WORKTREES_BASE + '/')) {
         return new Response(JSON.stringify({ error: 'Path not allowed' }), {
           status: 403,
           headers: { ...headers, 'Content-Type': 'application/json' }
         });
       }
 
+      // Only serve image files
+      const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+      if (!ALLOWED_EXTENSIONS.some(ext => resolvedPath.toLowerCase().endsWith(ext))) {
+        return new Response(JSON.stringify({ error: 'File type not allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
       try {
-        const file = Bun.file(filePath);
+        const file = Bun.file(resolvedPath);
         if (!(await file.exists())) {
           return new Response(JSON.stringify({ error: 'File not found' }), {
             status: 404,

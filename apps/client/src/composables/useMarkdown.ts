@@ -1,6 +1,7 @@
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
-// Configure marked for safe rendering
+// Configure marked for GFM rendering
 marked.setOptions({
   breaks: true,
   gfm: true,
@@ -8,10 +9,14 @@ marked.setOptions({
 
 /**
  * Render markdown string to sanitized HTML.
+ * Uses DOMPurify to strip any injected scripts/event handlers.
  * Links open in new tabs.
  */
 export function renderMarkdown(md: string): string {
-  const html = marked.parse(md, { async: false }) as string;
+  const rawHtml = marked.parse(md, { async: false }) as string;
+  const clean = DOMPurify.sanitize(rawHtml, {
+    ADD_ATTR: ['target', 'rel'],
+  });
   // Add target="_blank" to all links
-  return html.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+  return clean.replace(/<a /g, '<a target="_blank" rel="noopener" ');
 }
