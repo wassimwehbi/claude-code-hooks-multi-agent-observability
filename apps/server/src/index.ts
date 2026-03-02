@@ -1,15 +1,17 @@
+import { resolve } from 'node:path';
 import { initDatabase, insertEvent, getFilterOptions, getRecentEvents, updateEventHITLResponse } from './db';
 import type { HookEvent, HumanInTheLoopResponse } from './types';
-import { 
-  createTheme, 
-  updateThemeById, 
-  getThemeById, 
-  searchThemes, 
-  deleteThemeById, 
-  exportThemeById, 
+import {
+  createTheme,
+  updateThemeById,
+  getThemeById,
+  searchThemes,
+  deleteThemeById,
+  exportThemeById,
   importTheme,
-  getThemeStats 
+  getThemeStats
 } from './theme';
+import { scanAll, getRunDetail, getStats, startWatcher, getCachedRuns } from './adw-watcher';
 
 // Initialize database
 initDatabase();
@@ -229,8 +231,164 @@ const server = Bun.serve({
       }
     }
 
+    // ADW API endpoints
+
+    // GET /api/adw/runs - List all ADW runs
+    if (url.pathname === '/api/adw/runs' && req.method === 'GET') {
+      const runs = await scanAll();
+      return new Response(JSON.stringify(runs), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // GET /api/adw/runs/:id - Get detail for a specific ADW run
+    if (url.pathname.match(/^\/api\/adw\/runs\/[^/]+$/) && req.method === 'GET') {
+      const adwId = url.pathname.split('/')[4];
+      const detail = await getRunDetail(adwId);
+      if (!detail) {
+        return new Response(JSON.stringify({ error: 'ADW run not found' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+      return new Response(JSON.stringify(detail), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // GET /api/adw/screenshots?path=<absolute-path> - Serve a local screenshot file
+    if (url.pathname === '/api/adw/screenshots' && req.method === 'GET') {
+      const filePath = url.searchParams.get('path');
+      if (!filePath) {
+        return new Response(JSON.stringify({ error: 'Missing path parameter' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Security: resolve to canonical path, then verify it's under the allowed directory
+      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+      const resolvedPath = resolve(filePath);
+      if (!resolvedPath.startsWith(WORKTREES_BASE + '/')) {
+        return new Response(JSON.stringify({ error: 'Path not allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Only serve image files
+      const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+      if (!ALLOWED_EXTENSIONS.some(ext => resolvedPath.toLowerCase().endsWith(ext))) {
+        return new Response(JSON.stringify({ error: 'File type not allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const file = Bun.file(resolvedPath);
+        if (!(await file.exists())) {
+          return new Response(JSON.stringify({ error: 'File not found' }), {
+            status: 404,
+            headers: { ...headers, 'Content-Type': 'application/json' }
+          });
+        }
+
+        return new Response(file, {
+          headers: {
+            ...headers,
+            'Content-Type': file.type || 'image/png',
+            'Cache-Control': 'public, max-age=3600',
+          }
+        });
+      } catch (error) {
+        console.error('[ADW] Screenshot serve error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to read file' }), {
+          status: 500,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // GET /api/adw/specs?spec=<relative-path>&bug=<number> - Serve a local markdown spec file
+    // spec_path in ADW state is relative (e.g. "specs/bug-852-foo.md"), resolved against the bug worktree
+    if (url.pathname === '/api/adw/specs' && req.method === 'GET') {
+      const specParam = url.searchParams.get('spec');
+      const bugParam = url.searchParams.get('bug');
+      if (!specParam) {
+        return new Response(JSON.stringify({ error: 'Missing spec parameter' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (!specParam.toLowerCase().endsWith('.md')) {
+        return new Response(JSON.stringify({ error: 'Only .md files are allowed' }), {
+          status: 403,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+      const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/wassim/git/workflow-designer/agents';
+
+      // Build candidate paths: try bug worktree first, then agents dir
+      const candidates: string[] = [];
+      if (bugParam) {
+        candidates.push(resolve(WORKTREES_BASE, 'bug', bugParam, specParam));
+      }
+      candidates.push(resolve(ADW_AGENTS_PATH, specParam));
+
+      let resolvedPath: string | null = null;
+      for (const candidate of candidates) {
+        // Security: must stay within allowed directories
+        if (!candidate.startsWith(WORKTREES_BASE + '/') && !candidate.startsWith(ADW_AGENTS_PATH + '/')) {
+          continue;
+        }
+        const f = Bun.file(candidate);
+        if (await f.exists()) {
+          resolvedPath = candidate;
+          break;
+        }
+      }
+
+      if (!resolvedPath) {
+        return new Response(JSON.stringify({ error: 'Spec file not found' }), {
+          status: 404,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const content = await Bun.file(resolvedPath).text();
+        const filename = resolvedPath.split('/').pop() || 'spec.md';
+
+        return new Response(JSON.stringify({ content, filename }), {
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60',
+          }
+        });
+      } catch (error) {
+        console.error('[ADW] Spec serve error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to read file' }), {
+          status: 500,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // GET /api/adw/stats - Get aggregate ADW stats
+    if (url.pathname === '/api/adw/stats' && req.method === 'GET') {
+      const stats = getStats();
+      return new Response(JSON.stringify(stats), {
+        headers: { ...headers, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Theme API endpoints
-    
+
     // POST /api/themes - Create a new theme
     if (url.pathname === '/api/themes' && req.method === 'POST') {
       try {
@@ -423,10 +581,14 @@ const server = Bun.serve({
     open(ws) {
       console.log('WebSocket client connected');
       wsClients.add(ws);
-      
+
       // Send recent events on connection
       const events = getRecentEvents(300);
       ws.send(JSON.stringify({ type: 'initial', data: events }));
+
+      // Send current ADW runs
+      const adwRuns = getCachedRuns();
+      ws.send(JSON.stringify({ type: 'adw_initial', data: adwRuns }));
     },
     
     message(ws, message) {
@@ -446,6 +608,18 @@ const server = Bun.serve({
   }
 });
 
+// Start ADW file watcher — polls agents directory and broadcasts changes
+startWatcher((message) => {
+  wsClients.forEach(client => {
+    try {
+      client.send(message);
+    } catch (err) {
+      wsClients.delete(client);
+    }
+  });
+});
+
 console.log(`🚀 Server running on http://localhost:${server.port}`);
 console.log(`📊 WebSocket endpoint: ws://localhost:${server.port}/stream`);
 console.log(`📮 POST events to: http://localhost:${server.port}/events`);
+console.log(`🤖 ADW Pipeline: http://localhost:${server.port}/api/adw/runs`);

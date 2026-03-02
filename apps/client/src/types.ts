@@ -48,8 +48,8 @@ export interface FilterOptions {
 }
 
 export interface WebSocketMessage {
-  type: 'initial' | 'event' | 'hitl_response';
-  data: HookEvent | HookEvent[] | HumanInTheLoopResponse;
+  type: 'initial' | 'event' | 'hitl_response' | 'adw_initial' | 'adw_update';
+  data: HookEvent | HookEvent[] | HumanInTheLoopResponse | any[];
 }
 
 export type TimeRange = '1m' | '3m' | '5m' | '10m';

@@ -1,8 +1,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import type { HookEvent, WebSocketMessage } from '../types';
+import type { AdwRunSummary } from '../types/adw';
 
 export function useWebSocket(url: string) {
   const events = ref<HookEvent[]>([]);
+  const adwRuns = ref<AdwRunSummary[]>([]);
   const isConnected = ref(false);
   const error = ref<string | null>(null);
   
@@ -33,12 +35,14 @@ export function useWebSocket(url: string) {
           } else if (message.type === 'event') {
             const newEvent = message.data as HookEvent;
             events.value.push(newEvent);
-            
+
             // Limit events array to maxEvents, removing the oldest when exceeded
             if (events.value.length > maxEvents) {
               // Remove the oldest events (first 10) when limit is exceeded
               events.value = events.value.slice(events.value.length - maxEvents + 10);
             }
+          } else if (message.type === 'adw_initial' || message.type === 'adw_update') {
+            adwRuns.value = Array.isArray(message.data) ? message.data as AdwRunSummary[] : [];
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -92,6 +96,7 @@ export function useWebSocket(url: string) {
 
   return {
     events,
+    adwRuns,
     isConnected,
     error,
     clearEvents
