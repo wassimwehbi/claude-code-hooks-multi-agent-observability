@@ -21,6 +21,11 @@
           {{ detail.adw_id }}
         </span>
         <AdwStatusBadge v-if="detail.status" :status="detail.status" />
+        <span
+          v-if="detail.is_ux_bug"
+          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"
+          :style="{ color: '#8b5cf6', backgroundColor: '#8b5cf622' }"
+        >UX</span>
       </div>
       <button
         class="p-1 rounded hover:bg-[var(--theme-bg-quaternary)] transition-colors text-lg"
@@ -150,6 +155,28 @@
             <div v-if="detail.branch_name" class="text-xs font-mono" :style="{ color: 'var(--theme-text-tertiary)' }">
               {{ detail.branch_name }}
             </div>
+            <!-- PR Description Preview -->
+            <div v-if="prSummaryLoading" class="text-xs mt-2" :style="{ color: 'var(--theme-text-tertiary)' }">
+              Loading PR description…
+            </div>
+            <div v-else-if="prSummaryError" class="text-xs mt-2" :style="{ color: '#ef4444' }">
+              {{ prSummaryError }}
+            </div>
+            <div v-else-if="prSummary" class="mt-2">
+              <div
+                class="relative overflow-hidden text-xs adw-markdown"
+                style="max-height: 4.5rem; mask-image: linear-gradient(to bottom, black 60%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);"
+                :style="{ color: 'var(--theme-text-secondary)' }"
+                v-html="renderMarkdown(prSummary.body)"
+              />
+              <button
+                class="text-xs mt-1 underline decoration-dotted hover:decoration-solid cursor-pointer"
+                :style="{ color: 'var(--theme-primary)' }"
+                @click="prSummaryModalOpen = true"
+              >
+                View full description
+              </button>
+            </div>
           </template>
           <!-- Phase expects a PR but none exists -->
           <template v-else>
@@ -193,26 +220,115 @@
         @close="lightboxOpen = false"
       />
 
-      <!-- PR Review Feedback -->
-      <div v-if="detail.pr_review_feedback.length > 0">
-        <SectionLabel>Review Feedback ({{ detail.pr_review_feedback.length }})</SectionLabel>
-        <div class="space-y-2">
-          <AdwReviewFeedback
-            v-for="(fb, i) in detail.pr_review_feedback"
+      <!-- Feedback Iterations (unified accordion) -->
+      <div v-if="mergedIterations.length > 0">
+        <SectionLabel>Feedback Iterations ({{ mergedIterations.length }})</SectionLabel>
+        <div class="space-y-1.5">
+          <div
+            v-for="(iter, i) in mergedIterations"
             :key="i"
-            :feedback="fb"
-            @expand="openFeedbackModal(i)"
-          />
+            class="rounded-lg border overflow-hidden"
+            :style="{
+              borderColor: iter.review?.addressed ? 'var(--theme-accent-success)' : 'var(--theme-border-secondary)',
+              backgroundColor: 'var(--theme-bg-tertiary)',
+            }"
+          >
+            <!-- Accordion header -->
+            <button
+              class="w-full flex items-center gap-2 px-3 py-2 text-left cursor-pointer hover:brightness-110 transition-all"
+              @click="toggleIteration(i)"
+            >
+              <span
+                class="text-[10px] font-mono font-bold w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0"
+                :style="{ color: 'var(--theme-primary)', backgroundColor: 'var(--theme-primary)' + '18' }"
+              >{{ i + 1 }}</span>
+              <!-- Summary line -->
+              <span class="text-xs truncate flex-1 min-w-0" :style="{ color: 'var(--theme-text-secondary)' }">
+                {{ iter.summary || (iter.review ? iter.review.reviewer + ' review' : `Iteration ${i + 1}`) }}
+              </span>
+              <!-- Review state badge (if review present) -->
+              <span
+                v-if="iter.review"
+                class="px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0"
+                :style="{ color: getReviewStateColor(iter.review.state), backgroundColor: getReviewStateColor(iter.review.state) + '22' }"
+              >{{ iter.review.state || 'COMMENT' }}</span>
+              <span
+                v-if="iter.review?.addressed"
+                class="text-[10px] px-1 rounded flex-shrink-0"
+                :style="{ color: 'var(--theme-accent-success)', backgroundColor: 'var(--theme-accent-success)' + '22' }"
+              >Addressed</span>
+              <!-- Chevron -->
+              <span class="text-[10px] flex-shrink-0" :style="{ color: 'var(--theme-text-tertiary)' }">
+                {{ expandedIterations.has(i) ? '\u25BE' : '\u25B8' }}
+              </span>
+            </button>
+
+            <!-- Expanded content -->
+            <div
+              v-if="expandedIterations.has(i)"
+              class="border-t px-3 py-2.5 space-y-3"
+              :style="{ borderColor: 'var(--theme-border-tertiary)' }"
+            >
+              <!-- Iteration summary -->
+              <div v-if="iter.summary" class="text-xs" :style="{ color: 'var(--theme-text-secondary)' }">
+                {{ iter.summary }}
+              </div>
+
+              <!-- Review details -->
+              <template v-if="iter.review">
+                <!-- Reviewer + state -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium" :style="{ color: 'var(--theme-text-primary)' }">
+                    {{ iter.review.reviewer }}
+                  </span>
+                  <span
+                    class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    :style="{ color: getReviewStateColor(iter.review.state), backgroundColor: getReviewStateColor(iter.review.state) + '22' }"
+                  >{{ iter.review.state || 'COMMENT' }}</span>
+                </div>
+                <!-- Blocking issues -->
+                <div v-if="filteredIssues(iter.review.blocking_issues).length > 0">
+                  <div class="text-[10px] font-semibold uppercase mb-1" style="color: #ef4444">Blocking</div>
+                  <ul class="space-y-0.5">
+                    <li
+                      v-for="(issue, j) in filteredIssues(iter.review.blocking_issues)"
+                      :key="j"
+                      class="text-xs pl-2.5 border-l-2"
+                      :style="{ color: 'var(--theme-text-secondary)', borderColor: '#ef4444' }"
+                    >{{ issue }}</li>
+                  </ul>
+                </div>
+                <!-- Non-blocking issues -->
+                <div v-if="filteredIssues(iter.review.non_blocking).length > 0">
+                  <div class="text-[10px] font-semibold uppercase mb-1" style="color: #f59e0b">Non-blocking</div>
+                  <ul class="space-y-0.5">
+                    <li
+                      v-for="(issue, j) in filteredIssues(iter.review.non_blocking)"
+                      :key="j"
+                      class="text-xs pl-2.5 border-l-2"
+                      :style="{ color: 'var(--theme-text-secondary)', borderColor: '#f59e0b' }"
+                    >{{ issue }}</li>
+                  </ul>
+                </div>
+                <!-- Review body (collapsible sub-section) -->
+                <div v-if="iter.review.body">
+                  <button
+                    class="text-[10px] underline cursor-pointer"
+                    :style="{ color: 'var(--theme-text-tertiary)' }"
+                    @click.stop="toggleReviewBody(i)"
+                  >{{ expandedReviewBodies.has(i) ? 'Hide' : 'Show' }} full review</button>
+                  <div
+                    v-if="expandedReviewBodies.has(i)"
+                    class="mt-1.5 p-2.5 rounded text-xs overflow-x-auto max-h-[250px] overflow-y-auto adw-markdown"
+                    :style="{ backgroundColor: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)' }"
+                    v-html="renderMarkdown(iter.review.body)"
+                  />
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Feedback modal -->
-      <AdwFeedbackModal
-        :is-open="feedbackModalOpen"
-        :feedbacks="detail.pr_review_feedback"
-        :start-index="feedbackModalIndex"
-        @close="feedbackModalOpen = false"
-      />
 
       <!-- CI Failures -->
       <div v-if="detail.pr_ci_failures.length > 0">
@@ -314,6 +430,15 @@
         @close="specModalOpen = false"
       />
 
+      <!-- PR Summary modal -->
+      <AdwPRSummaryModal
+        :is-open="prSummaryModalOpen"
+        :pr-number="prSummary?.pr_number ?? null"
+        :title="prSummary?.title ?? ''"
+        :body="prSummary?.body ?? ''"
+        @close="prSummaryModalOpen = false"
+      />
+
       <!-- Blockers -->
       <div v-if="detail.blockers.length > 0">
         <SectionLabel>Blockers ({{ detail.blockers.length }})</SectionLabel>
@@ -363,6 +488,7 @@
       <div class="text-xs space-y-1" :style="{ color: 'var(--theme-text-tertiary)' }">
         <div>ADW ID: <span class="font-mono">{{ detail.adw_id }}</span></div>
         <div v-if="detail.last_pr_check_at">Last check: {{ detail.last_pr_check_at }}</div>
+        <div v-if="detail.last_unblock_check_at">Last unblock check: {{ detail.last_unblock_check_at }}</div>
         <div v-if="detail.e2e_test_path">E2E: <span class="font-mono">{{ detail.e2e_test_path }}</span></div>
       </div>
     </div>
@@ -370,18 +496,18 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, computed } from 'vue';
-import type { AdwRunDetail } from '../types/adw';
+import { h, ref, reactive, computed, watch } from 'vue';
+import type { AdwRunDetail, PRReviewFeedback } from '../types/adw';
 import { DEFAULT_CIRCUIT_BREAKER_LIMITS } from '../types/adw';
 import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
+import { renderMarkdown } from '../composables/useMarkdown';
 import { GITHUB_REPO_URL, API_BASE_URL } from '../config';
 import AdwPhaseStepper from './AdwPhaseStepper.vue';
 import AdwStatusBadge from './AdwStatusBadge.vue';
-import AdwReviewFeedback from './AdwReviewFeedback.vue';
-import AdwFeedbackModal from './AdwFeedbackModal.vue';
 import AdwAgentModal from './AdwAgentModal.vue';
 import AdwImageLightbox from './AdwImageLightbox.vue';
 import AdwSpecModal from './AdwSpecModal.vue';
+import AdwPRSummaryModal from './AdwPRSummaryModal.vue';
 
 const props = defineProps<{
   detail: AdwRunDetail;
@@ -418,14 +544,57 @@ const openLightbox = (index: number) => {
   lightboxOpen.value = true;
 };
 
-// Feedback modal state
-const feedbackModalOpen = ref(false);
-const feedbackModalIndex = ref(0);
+// Feedback iteration accordion state
+const expandedIterations = reactive(new Set<number>());
+const expandedReviewBodies = reactive(new Set<number>());
 
-const openFeedbackModal = (index: number) => {
-  feedbackModalIndex.value = index;
-  feedbackModalOpen.value = true;
+interface MergedIteration {
+  summary: string | null;
+  review: PRReviewFeedback | null;
+}
+
+const mergedIterations = computed<MergedIteration[]>(() => {
+  const history = props.detail.feedback_history ?? [];
+  const reviews = props.detail.pr_review_feedback ?? [];
+  const len = Math.max(history.length, reviews.length);
+  const result: MergedIteration[] = [];
+  for (let i = 0; i < len; i++) {
+    result.push({
+      summary: i < history.length ? history[i] : null,
+      review: i < reviews.length ? reviews[i] : null,
+    });
+  }
+  return result;
+});
+
+const toggleIteration = (i: number) => {
+  if (expandedIterations.has(i)) {
+    expandedIterations.delete(i);
+    expandedReviewBodies.delete(i);
+  } else {
+    expandedIterations.add(i);
+  }
 };
+
+const toggleReviewBody = (i: number) => {
+  if (expandedReviewBodies.has(i)) {
+    expandedReviewBodies.delete(i);
+  } else {
+    expandedReviewBodies.add(i);
+  }
+};
+
+const getReviewStateColor = (state: string): string => {
+  switch (state) {
+    case 'APPROVED': return '#22c55e';
+    case 'CHANGES_REQUESTED': return '#ef4444';
+    case 'COMMENTED': return '#f59e0b';
+    default: return '#6b7280';
+  }
+};
+
+const filteredIssues = (issues: string[]): string[] =>
+  issues.filter((s) => s !== 'None' && s.trim() !== '');
 
 // Agent modal state
 const agentModalOpen = ref(false);
@@ -444,6 +613,38 @@ const openSpecModal = () => {
   specModalPath.value = props.detail.spec_path;
   specModalOpen.value = true;
 };
+
+// PR summary state
+const prSummary = ref<{ pr_number: number; title: string; body: string; state: string; author: string } | null>(null);
+const prSummaryLoading = ref(false);
+const prSummaryError = ref<string | null>(null);
+const prSummaryModalOpen = ref(false);
+
+async function fetchPRDescription(prNumber: number) {
+  prSummaryLoading.value = true;
+  prSummaryError.value = null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/adw/pr-summary?pr=${prNumber}`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    prSummary.value = await res.json();
+  } catch (e: any) {
+    prSummaryError.value = e.message || 'Failed to load PR summary';
+  } finally {
+    prSummaryLoading.value = false;
+  }
+}
+
+watch(() => props.detail.pr_number, (prNumber) => {
+  if (prNumber != null) {
+    fetchPRDescription(prNumber);
+  } else {
+    prSummary.value = null;
+    prSummaryError.value = null;
+  }
+}, { immediate: true });
 
 // Functional sub-components
 const SectionLabel = (_: any, { slots }: any) =>

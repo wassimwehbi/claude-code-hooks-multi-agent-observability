@@ -85,10 +85,12 @@ export interface AdwRunSummary {
   status: BugStatus | null;
   pr_number: number | null;
   pr_state: string | null;
+  pr_url: string | null;
   pr_monitoring_iterations: number;
   last_pr_check_at: string | null;
   issue_title: string | null;
   is_blocked: boolean;
+  is_ux_bug: boolean;
   blockers: string[];
   implementation_attempts: number;
   review_rounds: number;
@@ -109,6 +111,7 @@ export interface AdwRunDetail {
   pr_url: string | null;
   pr_monitoring_iterations: number;
   last_pr_check_at: string | null;
+  last_unblock_check_at: string | null;
   issue_title: string | null;
   issue_body: string | null;
   issue_labels: string[];
@@ -124,6 +127,7 @@ export interface AdwRunDetail {
   test_retry_attempts: number;
   e2e_test_retry_attempts: number;
   feedback_iteration_count: number;
+  feedback_history: string[];
   test_resolution_history: TestResolutionAttempt[];
   pr_review_feedback: PRReviewFeedback[];
   pr_ci_failures: PRCIFailure[];
@@ -149,7 +153,7 @@ export const DEFAULT_CIRCUIT_BREAKER_LIMITS: CircuitBreakerLimits = {
   max_review_rounds: 3,
   max_test_retry_attempts: 4,
   max_e2e_test_retry_attempts: 2,
-  max_pr_monitoring_iterations: 5,
+  max_pr_monitoring_iterations: 50,
 };
 
 export interface AdwStats {

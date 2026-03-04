@@ -89,7 +89,9 @@ async function scanRun(adwDir: string): Promise<AdwRunSummary | null> {
   // Try to enrich from bugs file
   let issueTitle: string | null = null;
   let isBlocked = false;
+  let isUxBug = false;
   let blockers: string[] = [];
+  let prUrl: string | null = null;
   let implAttempts = 0;
   let reviewRounds = 0;
   let testRetries = 0;
@@ -105,7 +107,9 @@ async function scanRun(adwDir: string): Promise<AdwRunSummary | null> {
     if (bug) {
       issueTitle = bug.issue_title ?? null;
       isBlocked = bug.is_blocked ?? false;
+      isUxBug = bug.is_ux_bug ?? false;
       blockers = bug.blockers ?? [];
+      prUrl = bug.pr_url ?? null;
       implAttempts = bug.implementation_attempts ?? 0;
       reviewRounds = bug.review_rounds ?? 0;
       testRetries = bug.test_retry_attempts ?? 0;
@@ -123,10 +127,12 @@ async function scanRun(adwDir: string): Promise<AdwRunSummary | null> {
     status: (state.status as BugStatus) ?? null,
     pr_number: state.pr_number ?? null,
     pr_state: state.pr_state ?? null,
+    pr_url: prUrl,
     pr_monitoring_iterations: state.pr_monitoring_iterations ?? 0,
     last_pr_check_at: state.last_pr_check_at ?? null,
     issue_title: issueTitle,
     is_blocked: isBlocked,
+    is_ux_bug: isUxBug,
     blockers,
     implementation_attempts: implAttempts,
     review_rounds: reviewRounds,
@@ -280,10 +286,39 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
   // Sort agents by execution order (directory modification time)
   agents.sort((a, b) => a.startedAt - b.startedAt);
 
-  // Discover local screenshots
-  const localScreenshots: LocalScreenshot[] = state.bug_number != null
-    ? await discoverScreenshots(state.bug_number, adwId)
-    : [];
+  // Use screenshots from bug state first, fall back to filesystem discovery
+  let localScreenshots: LocalScreenshot[] = [];
+  if (bug) {
+    // Resolve before/after screenshots from bug state
+    if (bug.before_screenshot && bug.worktree_path) {
+      const absPath = bug.before_screenshot.startsWith('/')
+        ? bug.before_screenshot
+        : join(bug.worktree_path, bug.before_screenshot);
+      localScreenshots.push({ label: 'before', filename: basename(absPath), path: absPath });
+    }
+    if (bug.after_screenshot && bug.worktree_path) {
+      const absPath = bug.after_screenshot.startsWith('/')
+        ? bug.after_screenshot
+        : join(bug.worktree_path, bug.after_screenshot);
+      localScreenshots.push({ label: 'after', filename: basename(absPath), path: absPath });
+    }
+    // Add any additional screenshots from the screenshots array
+    if (Array.isArray(bug.screenshots) && bug.screenshots.length > 0) {
+      for (const ssPath of bug.screenshots) {
+        const absPath = String(ssPath);
+        const fname = basename(absPath);
+        // Avoid duplicating before/after
+        if (!localScreenshots.some((s) => s.path === absPath)) {
+          const label = fname.replace(/\.(png|jpg|jpeg)$/, '');
+          localScreenshots.push({ label, filename: fname, path: absPath });
+        }
+      }
+    }
+  }
+  // Fall back to filesystem discovery when state has no screenshots
+  if (localScreenshots.length === 0 && state.bug_number != null) {
+    localScreenshots = await discoverScreenshots(state.bug_number, adwId);
+  }
 
   return {
     adw_id: state.adw_id,
@@ -297,6 +332,7 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
     pr_url: bug?.pr_url ?? null,
     pr_monitoring_iterations: state.pr_monitoring_iterations ?? 0,
     last_pr_check_at: state.last_pr_check_at ?? null,
+    last_unblock_check_at: state.last_unblock_check_at ?? null,
     issue_title: bug?.issue_title ?? null,
     issue_body: bug?.issue_body ?? null,
     issue_labels: bug?.issue_labels ?? [],
@@ -311,6 +347,7 @@ export async function getRunDetail(adwId: string): Promise<AdwRunDetail | null> 
     test_retry_attempts: bug?.test_retry_attempts ?? 0,
     e2e_test_retry_attempts: bug?.e2e_test_retry_attempts ?? 0,
     feedback_iteration_count: bug?.feedback_iteration_count ?? 0,
+    feedback_history: bug?.feedback_history ?? [],
     test_resolution_history: bug?.test_resolution_history ?? [],
     pr_review_feedback: bug?.pr_review_feedback ?? [],
     pr_ci_failures: bug?.pr_ci_failures ?? [],
@@ -336,8 +373,9 @@ export function getStats(): AdwStats {
       phaseDistribution[run.phase] = (phaseDistribution[run.phase] || 0) + 1;
     }
 
-    // Status counts
-    if (run.status === 'completed') {
+    // Status counts — the ADW pipeline uses pr_merged/pr_closed + phase=done
+    // rather than a literal "completed" status
+    if (run.status === 'completed' || run.status === 'pr_merged' || run.phase === 'done') {
       completed++;
     } else if (run.status === 'failed') {
       failed++;

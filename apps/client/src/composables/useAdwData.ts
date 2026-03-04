@@ -19,7 +19,9 @@ export function useAdwData() {
       if (run.phase) {
         phaseDistribution[run.phase] = (phaseDistribution[run.phase] || 0) + 1;
       }
-      if (run.status === 'completed') {
+      // The ADW pipeline uses pr_merged/pr_closed + phase=done
+      // rather than a literal "completed" status
+      if (run.status === 'completed' || run.status === 'pr_merged' || run.phase === 'done') {
         completed++;
       } else if (run.status === 'failed') {
         failed++;

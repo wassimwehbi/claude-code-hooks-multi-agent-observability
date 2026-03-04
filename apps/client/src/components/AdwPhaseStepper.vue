@@ -8,7 +8,7 @@
           :class="[
             dotSizeClass,
             phaseState(phase) === 'completed' ? '' : '',
-            phaseState(phase) === 'current' ? 'animate-pulse' : '',
+            phaseState(phase) === 'current' && props.currentPhase !== 'done' ? 'animate-pulse' : '',
           ]"
           :style="{ backgroundColor: dotColor(phase) }"
           :title="phaseLabel(phase)"
