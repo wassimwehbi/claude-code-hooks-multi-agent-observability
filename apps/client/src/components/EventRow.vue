@@ -1,282 +1,289 @@
 <template>
   <div>
-    <!-- HITL Question Section (NEW) -->
+    <!-- HITL Question Section -->
     <div
       v-if="event.humanInTheLoop && (event.humanInTheLoopStatus?.status === 'pending' || hasSubmittedResponse)"
-      class="mb-4 p-4 rounded-lg border-2 shadow-lg"
-      :class="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded' ? 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20' : 'border-yellow-500 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 animate-pulse-slow'"
+      class="mb-2 rounded border-l-4 transition-colors duration-150"
+      :class="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded'
+        ? 'border-l-green-500'
+        : 'border-l-yellow-500 animate-pulse-slow'"
+      :style="{ backgroundColor: 'var(--theme-bg-primary)', borderColor: undefined }"
       @click.stop
     >
-      <!-- Question Header -->
-      <div class="mb-3">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center space-x-2">
-            <span class="text-2xl">{{ hitlTypeEmoji }}</span>
-            <h3 class="text-lg font-bold" :class="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded' ? 'text-green-900 dark:text-green-100' : 'text-yellow-900 dark:text-yellow-100'">
+      <div class="px-3 py-2">
+        <!-- Header row -->
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+              :style="{
+                color: hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded' ? '#22c55e' : '#eab308',
+                backgroundColor: (hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded' ? '#22c55e' : '#eab308') + '22'
+              }"
+            >
               {{ hitlTypeLabel }}
-            </h3>
-            <span v-if="permissionType" class="text-xs font-mono font-semibold px-2 py-1 rounded border-2 bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-900 dark:text-blue-100">
+            </span>
+            <span
+              v-if="permissionType"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium font-mono whitespace-nowrap"
+              :style="{ color: '#3b82f6', backgroundColor: '#3b82f622' }"
+            >
               {{ permissionType }}
             </span>
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+              :style="{ color: appHexColor, backgroundColor: appHexColor + '22' }"
+            >
+              {{ event.source_app }}
+            </span>
+            <span
+              class="text-xs font-mono"
+              :style="{ color: 'var(--theme-text-tertiary)' }"
+            >
+              {{ sessionIdShort }}
+            </span>
           </div>
-          <span v-if="!hasSubmittedResponse && event.humanInTheLoopStatus?.status !== 'responded'" class="text-xs font-semibold text-yellow-700 dark:text-yellow-300">
-            ⏱️ Waiting for response...
-          </span>
-        </div>
-        <div class="flex items-center space-x-2 ml-9">
-          <span
-            class="text-xs font-semibold text-[var(--theme-text-primary)] px-1.5 py-0.5 rounded-full border-2 bg-[var(--theme-bg-tertiary)] shadow-sm"
-            :style="{ ...appBgStyle, ...appBorderStyle }"
-          >
-            {{ event.source_app }}
-          </span>
-          <span class="text-xs text-[var(--theme-text-secondary)] px-1.5 py-0.5 rounded-full border bg-[var(--theme-bg-tertiary)]/50 shadow-sm" :class="borderColorClass">
-            {{ sessionIdShort }}
-          </span>
-          <span class="text-xs text-[var(--theme-text-tertiary)] font-medium">
-            {{ formatTime(event.timestamp) }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Question Text -->
-      <div class="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border" :class="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded' ? 'border-green-300' : 'border-yellow-300'">
-        <p class="text-base font-medium text-gray-900 dark:text-gray-100">
-          {{ event.humanInTheLoop.question }}
-        </p>
-      </div>
-
-      <!-- Inline Response Display (Optimistic UI) -->
-      <div v-if="localResponse || (event.humanInTheLoopStatus?.status === 'responded' && event.humanInTheLoopStatus.response)" class="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-400">
-        <div class="flex items-center mb-2">
-          <span class="text-xl mr-2">✅</span>
-          <strong class="text-green-900 dark:text-green-100">Your Response:</strong>
-        </div>
-        <div v-if="(localResponse?.response || event.humanInTheLoopStatus?.response?.response)" class="text-gray-900 dark:text-gray-100 ml-7">
-          {{ localResponse?.response || event.humanInTheLoopStatus?.response?.response }}
-        </div>
-        <div v-if="(localResponse?.permission !== undefined || event.humanInTheLoopStatus?.response?.permission !== undefined)" class="text-gray-900 dark:text-gray-100 ml-7">
-          {{ (localResponse?.permission ?? event.humanInTheLoopStatus?.response?.permission) ? 'Approved ✅' : 'Denied ❌' }}
-        </div>
-        <div v-if="(localResponse?.choice || event.humanInTheLoopStatus?.response?.choice)" class="text-gray-900 dark:text-gray-100 ml-7">
-          {{ localResponse?.choice || event.humanInTheLoopStatus?.response?.choice }}
-        </div>
-      </div>
-
-      <!-- Response UI -->
-      <div v-if="event.humanInTheLoop.type === 'question'">
-        <!-- Text Input for Questions -->
-        <textarea
-          v-model="responseText"
-          class="w-full p-3 border-2 border-yellow-500 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
-          rows="3"
-          placeholder="Type your response here..."
-          @click.stop
-        ></textarea>
-        <div class="flex justify-end space-x-2 mt-2">
-          <button
-            @click.stop="submitResponse"
-            :disabled="!responseText.trim() || isSubmitting || hasSubmittedResponse"
-            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed"
-          >
-            {{ isSubmitting ? '⏳ Sending...' : '✅ Submit Response' }}
-          </button>
-        </div>
-      </div>
-
-      <div v-else-if="event.humanInTheLoop.type === 'permission'">
-        <!-- Yes/No Buttons for Permissions -->
-        <div class="flex justify-end items-center space-x-3">
-          <div v-if="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded'" class="flex items-center px-3 py-2 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-500">
-            <span class="text-sm font-bold text-green-900 dark:text-green-100">Responded</span>
+          <div class="flex items-center gap-2">
+            <span
+              v-if="!hasSubmittedResponse && event.humanInTheLoopStatus?.status !== 'responded'"
+              class="text-xs font-medium"
+              :style="{ color: '#eab308' }"
+            >
+              Waiting for response...
+            </span>
+            <span class="text-xs" :style="{ color: 'var(--theme-text-tertiary)' }">
+              {{ formatTime(event.timestamp) }}
+            </span>
           </div>
-          <button
-            @click.stop="submitPermission(false)"
-            :disabled="isSubmitting || hasSubmittedResponse"
-            class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-            :class="hasSubmittedResponse ? 'opacity-40 cursor-not-allowed' : ''"
-          >
-            {{ isSubmitting ? '⏳' : '❌ Deny' }}
-          </button>
-          <button
-            @click.stop="submitPermission(true)"
-            :disabled="isSubmitting || hasSubmittedResponse"
-            class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-            :class="hasSubmittedResponse ? 'opacity-40 cursor-not-allowed' : ''"
-          >
-            {{ isSubmitting ? '⏳' : '✅ Approve' }}
-          </button>
         </div>
-      </div>
 
-      <div v-else-if="event.humanInTheLoop.type === 'choice'">
-        <!-- Multiple Choice Buttons -->
-        <div class="flex flex-wrap gap-2 justify-end">
-          <button
-            v-for="choice in event.humanInTheLoop.choices"
-            :key="choice"
-            @click.stop="submitChoice(choice)"
-            :disabled="isSubmitting || hasSubmittedResponse"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
-          >
-            {{ isSubmitting ? '⏳' : choice }}
-          </button>
+        <!-- Question Text -->
+        <div
+          class="mb-2 px-3 py-2 rounded border"
+          :style="{
+            backgroundColor: 'var(--theme-bg-secondary)',
+            borderColor: 'var(--theme-border-tertiary)'
+          }"
+        >
+          <p class="text-sm" :style="{ color: 'var(--theme-text-primary)' }">
+            {{ event.humanInTheLoop.question }}
+          </p>
+        </div>
+
+        <!-- Inline Response Display (Optimistic UI) -->
+        <div
+          v-if="localResponse || (event.humanInTheLoopStatus?.status === 'responded' && event.humanInTheLoopStatus.response)"
+          class="mb-2 px-3 py-2 rounded border border-green-400/30"
+          :style="{ backgroundColor: '#22c55e' + '0a' }"
+        >
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-xs font-medium" :style="{ color: '#22c55e' }">Response</span>
+          </div>
+          <div v-if="(localResponse?.response || event.humanInTheLoopStatus?.response?.response)" class="text-sm" :style="{ color: 'var(--theme-text-primary)' }">
+            {{ localResponse?.response || event.humanInTheLoopStatus?.response?.response }}
+          </div>
+          <div v-if="(localResponse?.permission !== undefined || event.humanInTheLoopStatus?.response?.permission !== undefined)" class="text-sm" :style="{ color: 'var(--theme-text-primary)' }">
+            {{ (localResponse?.permission ?? event.humanInTheLoopStatus?.response?.permission) ? 'Approved' : 'Denied' }}
+          </div>
+          <div v-if="(localResponse?.choice || event.humanInTheLoopStatus?.response?.choice)" class="text-sm" :style="{ color: 'var(--theme-text-primary)' }">
+            {{ localResponse?.choice || event.humanInTheLoopStatus?.response?.choice }}
+          </div>
+        </div>
+
+        <!-- Response UI -->
+        <div v-if="event.humanInTheLoop.type === 'question'">
+          <textarea
+            v-model="responseText"
+            class="w-full px-3 py-2 text-sm rounded border resize-none focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
+            :style="{
+              backgroundColor: 'var(--theme-bg-secondary)',
+              borderColor: 'var(--theme-border-secondary)',
+              color: 'var(--theme-text-primary)'
+            }"
+            rows="2"
+            placeholder="Type your response here..."
+            @click.stop
+          ></textarea>
+          <div class="flex justify-end mt-1.5">
+            <button
+              @click.stop="submitResponse"
+              :disabled="!responseText.trim() || isSubmitting || hasSubmittedResponse"
+              class="px-3 py-1 text-xs font-medium rounded transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              :style="{
+                backgroundColor: '#22c55e',
+                color: '#fff'
+              }"
+            >
+              {{ isSubmitting ? 'Sending...' : 'Submit' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-else-if="event.humanInTheLoop.type === 'permission'">
+          <div class="flex justify-end items-center gap-2">
+            <span
+              v-if="hasSubmittedResponse || event.humanInTheLoopStatus?.status === 'responded'"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+              :style="{ color: '#22c55e', backgroundColor: '#22c55e22' }"
+            >
+              Responded
+            </span>
+            <button
+              @click.stop="submitPermission(false)"
+              :disabled="isSubmitting || hasSubmittedResponse"
+              class="px-3 py-1 text-xs font-medium rounded transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: '#ef4444', color: '#fff' }"
+            >
+              {{ isSubmitting ? 'Sending...' : 'Deny' }}
+            </button>
+            <button
+              @click.stop="submitPermission(true)"
+              :disabled="isSubmitting || hasSubmittedResponse"
+              class="px-3 py-1 text-xs font-medium rounded transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: '#22c55e', color: '#fff' }"
+            >
+              {{ isSubmitting ? 'Sending...' : 'Approve' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-else-if="event.humanInTheLoop.type === 'choice'">
+          <div class="flex flex-wrap gap-1.5 justify-end">
+            <button
+              v-for="choice in event.humanInTheLoop.choices"
+              :key="choice"
+              @click.stop="submitChoice(choice)"
+              :disabled="isSubmitting || hasSubmittedResponse"
+              class="px-3 py-1 text-xs font-medium rounded transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: '#3b82f6', color: '#fff' }"
+            >
+              {{ isSubmitting ? 'Sending...' : choice }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Original Event Row Content (skip if HITL with humanInTheLoop) -->
+    <!-- Event Row Content (skip if HITL with humanInTheLoop) -->
     <div
       v-if="!event.humanInTheLoop"
-      class="group relative p-4 mobile:p-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] bg-gradient-to-r from-[var(--theme-bg-primary)] to-[var(--theme-bg-secondary)]"
-      :class="{ 'ring-2 ring-[var(--theme-primary)] border-[var(--theme-primary)] shadow-2xl': isExpanded }"
+      class="relative cursor-pointer border-b"
+      :style="{
+        borderColor: 'var(--theme-border-tertiary)',
+        backgroundColor: isExpanded ? 'var(--theme-bg-secondary)' : 'transparent'
+      }"
       @click="toggleExpanded"
+      @mouseenter="handleRowHover($event, true)"
+      @mouseleave="handleRowHover($event, false)"
     >
-    <!-- App color indicator -->
-    <div 
-      class="absolute left-0 top-0 bottom-0 w-3 rounded-l-lg"
-      :style="{ backgroundColor: appHexColor }"
-    ></div>
-    
-    <!-- Session color indicator -->
-    <div 
-      class="absolute left-3 top-0 bottom-0 w-1.5"
-      :class="gradientClass"
-    ></div>
-    
-    <div class="ml-4">
-      <!-- Desktop Layout: Original horizontal layout -->
-      <div class="hidden mobile:block mb-2">
-        <!-- Mobile: App + Time on first row -->
-        <div class="flex items-center justify-between mb-1">
-          <span 
-            class="text-xs font-semibold text-[var(--theme-text-primary)] px-1.5 py-0.5 rounded-full border-2 bg-[var(--theme-bg-tertiary)] shadow-md"
-            :style="{ ...appBgStyle, ...appBorderStyle }"
-          >
-            {{ event.source_app }}
-          </span>
-          <span class="text-xs text-[var(--theme-text-tertiary)] font-medium">
-            {{ formatTime(event.timestamp) }}
-          </span>
-        </div>
-        
-        <!-- Mobile: Session + Event Type on second row -->
-        <div class="flex items-center space-x-2">
-          <span class="text-xs text-[var(--theme-text-secondary)] px-1.5 py-0.5 rounded-full border bg-[var(--theme-bg-tertiary)]/50" :class="borderColorClass">
-            {{ sessionIdShort }}
-          </span>
-          <span v-if="event.model_name" class="text-xs text-[var(--theme-text-secondary)] px-1.5 py-0.5 rounded-full border bg-[var(--theme-bg-tertiary)]/50 shadow-sm" :title="`Model: ${event.model_name}`">
-            <span class="mr-0.5">🧠</span>{{ formatModelName(event.model_name) }}
-          </span>
-          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold bg-[var(--theme-primary)] text-white shadow-md">
-            <span class="mr-1 text-sm">{{ hookEmoji }}</span>
-            {{ event.hook_event_type }}
-          </span>
-          <span v-if="toolName" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold border-2 border-[var(--theme-primary)] text-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm">
-            <span class="mr-0.5">{{ toolEmoji }}</span>{{ toolName }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Desktop Layout: Original single row layout -->
-      <div class="flex items-center justify-between mb-2 mobile:hidden">
-        <div class="flex items-center space-x-4">
+      <div class="px-3 py-1.5">
+        <!-- Single monospace log line -->
+        <div class="flex items-center gap-1.5 min-w-0 font-mono text-xs leading-5">
+          <!-- Source app: bold colored text -->
           <span
-            class="text-base font-bold text-[var(--theme-text-primary)] px-2 py-0.5 rounded-full border-2 bg-[var(--theme-bg-tertiary)] shadow-lg"
-            :style="{ ...appBgStyle, ...appBorderStyle }"
-          >
-            {{ event.source_app }}
-          </span>
-          <span class="text-sm text-[var(--theme-text-secondary)] px-2 py-0.5 rounded-full border bg-[var(--theme-bg-tertiary)]/50 shadow-md" :class="borderColorClass">
-            {{ sessionIdShort }}
-          </span>
-          <span v-if="event.model_name" class="text-sm text-[var(--theme-text-secondary)] px-2 py-0.5 rounded-full border bg-[var(--theme-bg-tertiary)]/50 shadow-md" :title="`Model: ${event.model_name}`">
-            <span class="mr-1">🧠</span>{{ formatModelName(event.model_name) }}
-          </span>
-          <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-bold bg-[var(--theme-primary)] text-white shadow-lg">
-            <span class="mr-1.5 text-base">{{ hookEmoji }}</span>
-            {{ event.hook_event_type }}
-          </span>
-          <span v-if="toolName" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold border-2 border-[var(--theme-primary)] text-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm">
-            <span class="mr-1">{{ toolEmoji }}</span>{{ toolName }}
-          </span>
-        </div>
-        <span class="text-sm text-[var(--theme-text-tertiary)] font-semibold">
-          {{ formatTime(event.timestamp) }}
-        </span>
-      </div>
-      
-      <!-- Tool info and Summary - Desktop Layout -->
-      <div class="flex items-center justify-between mb-2 mobile:hidden">
-        <div v-if="toolInfo" class="text-base text-[var(--theme-text-secondary)] font-semibold">
-          <span class="font-medium italic px-2 py-0.5 rounded border-2 border-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm">{{ toolInfo.tool }}</span>
-          <span v-if="toolInfo.detail" class="ml-2 text-[var(--theme-text-tertiary)]" :class="{ 'italic': event.hook_event_type === 'UserPromptSubmit' }">{{ toolInfo.detail }}</span>
-        </div>
-        
-        <!-- Summary aligned to the right -->
-        <div v-if="event.summary" class="max-w-[50%] px-3 py-1.5 bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 rounded-lg shadow-md">
-          <span class="text-sm text-[var(--theme-text-primary)] font-semibold">
-            <span class="mr-1">📝</span>
-            {{ event.summary }}
-          </span>
+            class="font-bold whitespace-nowrap flex-shrink-0"
+            :style="{ color: appHexColor }"
+          >{{ event.source_app }}</span>
+
+          <!-- Session ID: dim -->
+          <span
+            class="whitespace-nowrap flex-shrink-0"
+            :style="{ color: 'var(--theme-text-quaternary)' }"
+          >{{ sessionIdShort }}</span>
+
+          <!-- Event type: abbreviated, fixed-width colored text -->
+          <span
+            class="whitespace-nowrap flex-shrink-0 font-semibold"
+            :style="{ color: eventTypeColor, width: '6ch', display: 'inline-block' }"
+          >{{ eventTypeAbbrev }}</span>
+
+          <!-- Model name: dim inline -->
+          <span
+            v-if="event.model_name"
+            class="whitespace-nowrap flex-shrink-0"
+            :style="{ color: 'var(--theme-text-quaternary)' }"
+            :title="`Model: ${event.model_name}`"
+          >{{ formatModelName(event.model_name) }}</span>
+
+          <!-- Tool name: primary colored text -->
+          <span
+            v-if="toolName"
+            class="whitespace-nowrap flex-shrink-0"
+            :style="{ color: 'var(--theme-primary)' }"
+          >{{ toolName }}</span>
+
+          <!-- Tool info / detail -->
+          <span
+            v-if="toolInfo?.detail"
+            class="truncate min-w-0"
+            :style="{ color: 'var(--theme-text-tertiary)' }"
+            :class="{ 'italic': event.hook_event_type === 'UserPromptSubmit' }"
+          >{{ toolInfo.detail }}</span>
+
+          <!-- Summary -->
+          <span
+            v-if="event.summary"
+            class="truncate min-w-0 hidden md:inline"
+            :style="{ color: 'var(--theme-text-secondary)' }"
+          >{{ event.summary }}</span>
+
+          <!-- Spacer -->
+          <span class="flex-1"></span>
+
+          <!-- Timestamp -->
+          <span
+            class="whitespace-nowrap flex-shrink-0"
+            :style="{ color: 'var(--theme-text-quaternary)' }"
+          >{{ formatTime(event.timestamp) }}</span>
         </div>
       </div>
 
-      <!-- Tool info and Summary - Mobile Layout -->
-      <div class="space-y-2 hidden mobile:block mb-2">
-        <div v-if="toolInfo" class="text-sm text-[var(--theme-text-secondary)] font-semibold w-full">
-          <span class="font-medium italic px-1.5 py-0.5 rounded border-2 border-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm">{{ toolInfo.tool }}</span>
-          <span v-if="toolInfo.detail" class="ml-2 text-[var(--theme-text-tertiary)]" :class="{ 'italic': event.hook_event_type === 'UserPromptSubmit' }">{{ toolInfo.detail }}</span>
-        </div>
-        
-        <div v-if="event.summary" class="w-full px-2 py-1 bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 rounded-lg shadow-md">
-          <span class="text-xs text-[var(--theme-text-primary)] font-semibold">
-            <span class="mr-1">📝</span>
-            {{ event.summary }}
-          </span>
-        </div>
-      </div>
-      
       <!-- Expanded content -->
-      <div v-if="isExpanded" class="mt-2 pt-2 border-t-2 border-[var(--theme-primary)] bg-gradient-to-r from-[var(--theme-bg-primary)] to-[var(--theme-bg-secondary)] rounded-b-lg p-3 space-y-3">
+      <div
+        v-if="isExpanded"
+        class="border-t px-3 py-2 space-y-2"
+        :style="{ borderColor: 'var(--theme-border-tertiary)', backgroundColor: 'var(--theme-bg-secondary)' }"
+        @click.stop
+      >
         <!-- Payload -->
         <div>
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="text-base mobile:text-sm font-bold text-[var(--theme-primary)] drop-shadow-sm flex items-center">
-              <span class="mr-1.5 text-xl mobile:text-base">📦</span>
-              Payload
-            </h4>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium" :style="{ color: 'var(--theme-text-secondary)' }">Payload</span>
             <button
               @click.stop="copyPayload"
-              class="px-3 py-1 mobile:px-2 mobile:py-0.5 text-sm mobile:text-xs font-bold rounded-lg bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-white transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-1"
+              class="px-2 py-0.5 text-xs font-medium rounded transition-colors duration-150"
+              :style="{ color: 'var(--theme-primary)', backgroundColor: 'var(--theme-primary)' + '22' }"
             >
-              <span>{{ copyButtonText }}</span>
+              {{ copyButtonText }}
             </button>
           </div>
-          <pre class="text-sm mobile:text-xs text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] p-3 mobile:p-2 rounded-lg overflow-x-auto max-h-64 overflow-y-auto font-mono border border-[var(--theme-primary)]/30 shadow-md hover:shadow-lg transition-shadow duration-200">{{ formattedPayload }}</pre>
+          <pre
+            class="text-xs font-mono p-2 rounded border overflow-x-auto max-h-64 overflow-y-auto"
+            :style="{
+              color: 'var(--theme-text-primary)',
+              backgroundColor: 'var(--theme-bg-tertiary)',
+              borderColor: 'var(--theme-border-tertiary)'
+            }"
+          >{{ formattedPayload }}</pre>
         </div>
-        
+
         <!-- Chat transcript button -->
         <div v-if="event.chat && event.chat.length > 0" class="flex justify-end">
           <button
             @click.stop="!isMobile && (showChatModal = true)"
-            :class="[
-              'px-4 py-2 mobile:px-3 mobile:py-1.5 font-bold rounded-lg transition-all duration-200 flex items-center space-x-1.5 shadow-md hover:shadow-lg',
-              isMobile 
-                ? 'bg-[var(--theme-bg-quaternary)] cursor-not-allowed opacity-50 text-[var(--theme-text-quaternary)] border border-[var(--theme-border-tertiary)]' 
-                : 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary-light)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-primary)] text-white border border-[var(--theme-primary-dark)] transform hover:scale-105'
-            ]"
+            class="px-2 py-1 text-xs font-medium rounded transition-colors duration-150"
             :disabled="isMobile"
+            :style="isMobile
+              ? { color: 'var(--theme-text-quaternary)', backgroundColor: 'var(--theme-bg-quaternary)', cursor: 'not-allowed', opacity: '0.5' }
+              : { color: 'var(--theme-primary)', backgroundColor: 'var(--theme-primary)' + '22' }
+            "
           >
-            <span class="text-base mobile:text-sm">💬</span>
-            <span class="text-sm mobile:text-xs font-bold drop-shadow-sm">
-              {{ isMobile ? 'Not available in mobile' : `View Chat Transcript (${event.chat.length} messages)` }}
-            </span>
+            {{ isMobile ? 'Chat not available on mobile' : `View Chat (${event.chat.length} messages)` }}
           </button>
         </div>
       </div>
     </div>
-    </div>
+
     <!-- Chat Modal -->
     <ChatTranscriptModal
       v-if="event.chat && event.chat.length > 0"
@@ -291,11 +298,8 @@
 import { ref, computed } from 'vue';
 import type { HookEvent, HumanInTheLoopResponse } from '../types';
 import { useMediaQuery } from '../composables/useMediaQuery';
-import { useEventEmojis } from '../composables/useEventEmojis';
 import ChatTranscriptModal from './ChatTranscriptModal.vue';
 import { API_BASE_URL } from '../config';
-
-const { getEmojiForToolName } = useEventEmojis();
 
 const props = defineProps<{
   event: HookEvent;
@@ -313,7 +317,7 @@ const emit = defineEmits<{
 // Existing refs
 const isExpanded = ref(false);
 const showChatModal = ref(false);
-const copyButtonText = ref('📋 Copy');
+const copyButtonText = ref('Copy');
 
 // New refs for HITL
 const responseText = ref('');
@@ -328,56 +332,58 @@ const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value;
 };
 
+// Hover handler matching AdwRunTable pattern
+const handleRowHover = (event: MouseEvent, enter: boolean) => {
+  if (isExpanded.value) return; // Don't change bg when expanded
+  const el = event.currentTarget as HTMLElement;
+  el.style.backgroundColor = enter ? 'var(--theme-bg-tertiary)' : 'transparent';
+};
+
 const sessionIdShort = computed(() => {
   return props.event.session_id.slice(0, 8);
 });
 
-const hookEmoji = computed(() => {
-  const emojiMap: Record<string, string> = {
-    'PreToolUse': '🔧',
-    'PostToolUse': '✅',
-    'PostToolUseFailure': '❌',
-    'PermissionRequest': '🔐',
-    'Notification': '🔔',
-    'Stop': '🛑',
-    'SubagentStart': '🟢',
-    'SubagentStop': '👥',
-    'PreCompact': '📦',
-    'UserPromptSubmit': '💬',
-    'SessionStart': '🚀',
-    'SessionEnd': '🏁'
+// Abbreviated event type labels (fixed 6ch width)
+const eventTypeAbbrev = computed(() => {
+  const abbrevMap: Record<string, string> = {
+    'PreToolUse': 'PRE',
+    'PostToolUse': 'POST',
+    'PostToolUseFailure': 'FAIL',
+    'PermissionRequest': 'PERM',
+    'Notification': 'NOTE',
+    'Stop': 'STOP',
+    'SubagentStart': 'SUB\u2191',
+    'SubagentStop': 'SUB\u2193',
+    'PreCompact': 'PACK',
+    'UserPromptSubmit': 'PROMPT',
+    'SessionStart': 'START',
+    'SessionEnd': 'END'
   };
-  const baseEmoji = emojiMap[props.event.hook_event_type] || '❓';
-
-  // For tool events, show combo: event emoji + tool emoji (e.g., 🔧💻)
-  const toolEventTypes = ['PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'PermissionRequest'];
-  if (toolEventTypes.includes(props.event.hook_event_type) && props.event.payload?.tool_name) {
-    return `${baseEmoji}${getEmojiForToolName(props.event.payload.tool_name)}`;
-  }
-
-  return baseEmoji;
+  return abbrevMap[props.event.hook_event_type] || props.event.hook_event_type.slice(0, 6).toUpperCase();
 });
 
-const borderColorClass = computed(() => {
-  // Convert bg-color-500 to border-color-500
-  return props.colorClass.replace('bg-', 'border-');
-});
-
-
-const appBorderStyle = computed(() => {
-  return {
-    borderColor: props.appHexColor
+// Color map for event types
+const eventTypeColor = computed(() => {
+  const colorMap: Record<string, string> = {
+    'PreToolUse': '#3b82f6',
+    'PostToolUse': '#22c55e',
+    'PostToolUseFailure': '#ef4444',
+    'PermissionRequest': '#f59e0b',
+    'Notification': '#8b5cf6',
+    'Stop': '#ef4444',
+    'SubagentStart': '#22c55e',
+    'SubagentStop': '#6b7280',
+    'PreCompact': '#6b7280',
+    'UserPromptSubmit': '#3b82f6',
+    'SessionStart': '#22c55e',
+    'SessionEnd': '#6b7280'
   };
+  return colorMap[props.event.hook_event_type] || '#6b7280';
 });
 
-const appBgStyle = computed(() => {
-  // Use the hex color with 20% opacity
-  return {
-    backgroundColor: props.appHexColor + '33' // Add 33 for 20% opacity in hex
-  };
-});
-
+// Lazy-compute formatted payload: only stringify when expanded
 const formattedPayload = computed(() => {
+  if (!isExpanded.value) return '';
   return JSON.stringify(props.event.payload, null, 2);
 });
 
@@ -390,14 +396,9 @@ const toolName = computed(() => {
   return null;
 });
 
-const toolEmoji = computed(() => {
-  if (!toolName.value) return '';
-  return getEmojiForToolName(toolName.value);
-});
-
 const toolInfo = computed(() => {
   const payload = props.event.payload;
-  
+
   // Handle UserPromptSubmit events
   if (props.event.hook_event_type === 'UserPromptSubmit' && payload.prompt) {
     return {
@@ -405,7 +406,7 @@ const toolInfo = computed(() => {
       detail: `"${payload.prompt.slice(0, 100)}${payload.prompt.length > 100 ? '...' : ''}"`
     };
   }
-  
+
   // Handle PreCompact events
   if (props.event.hook_event_type === 'PreCompact') {
     const trigger = payload.trigger || 'unknown';
@@ -414,7 +415,7 @@ const toolInfo = computed(() => {
       detail: trigger === 'manual' ? 'Manual compaction' : 'Auto-compaction (full context)'
     };
   }
-  
+
   // Handle SessionStart events
   if (props.event.hook_event_type === 'SessionStart') {
     const source = payload.source || 'unknown';
@@ -428,11 +429,11 @@ const toolInfo = computed(() => {
       detail: sourceLabels[source] || source
     };
   }
-  
+
   // Handle tool-based events
   if (payload.tool_name) {
     const info: { tool: string; detail?: string } = { tool: payload.tool_name };
-    
+
     if (payload.tool_input) {
       const input = payload.tool_input;
       if (input.command) {
@@ -473,10 +474,10 @@ const toolInfo = computed(() => {
         info.detail = input.skill;
       }
     }
-    
+
     return info;
   }
-  
+
   return null;
 });
 
@@ -491,8 +492,6 @@ const formatModelName = (name: string | null | undefined): string => {
   if (!name) return '';
 
   // Extract model family and version
-  // "claude-haiku-4-5-20251001" -> "haiku-4-5"
-  // "claude-sonnet-4-5-20250929" -> "sonnet-4-5"
   const parts = name.split('-');
   if (parts.length >= 4) {
     return `${parts[1]}-${parts[2]}-${parts[3]}`;
@@ -503,30 +502,20 @@ const formatModelName = (name: string | null | undefined): string => {
 const copyPayload = async () => {
   try {
     await navigator.clipboard.writeText(formattedPayload.value);
-    copyButtonText.value = '✅ Copied!';
+    copyButtonText.value = 'Copied';
     setTimeout(() => {
-      copyButtonText.value = '📋 Copy';
+      copyButtonText.value = 'Copy';
     }, 2000);
   } catch (err) {
     console.error('Failed to copy:', err);
-    copyButtonText.value = '❌ Failed';
+    copyButtonText.value = 'Failed';
     setTimeout(() => {
-      copyButtonText.value = '📋 Copy';
+      copyButtonText.value = 'Copy';
     }, 2000);
   }
 };
 
-// New computed properties for HITL
-const hitlTypeEmoji = computed(() => {
-  if (!props.event.humanInTheLoop) return '';
-  const emojiMap = {
-    question: '❓',
-    permission: '🔐',
-    choice: '🎯'
-  };
-  return emojiMap[props.event.humanInTheLoop.type] || '❓';
-});
-
+// Computed properties for HITL
 const hitlTypeLabel = computed(() => {
   if (!props.event.humanInTheLoop) return '';
   const labelMap = {

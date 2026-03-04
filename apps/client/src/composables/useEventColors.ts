@@ -1,4 +1,7 @@
 
+// Memoization cache for hex color lookups
+const hexColorCache = new Map<string, string>();
+
 export function useEventColors() {
   const colorPalette = [
     'bg-blue-500',
@@ -96,10 +99,15 @@ export function useEventColors() {
   };
 
   const getHexColorForApp = (appName: string): string => {
+    const cached = hexColorCache.get(appName);
+    if (cached) return cached;
+
     const hash = hashString(appName);
     // Generate HSL color with fixed saturation and lightness for consistency
     const hue = hash % 360;
-    return `hsl(${hue}, 70%, 50%)`;
+    const color = `hsl(${hue}, 70%, 50%)`;
+    hexColorCache.set(appName, color);
+    return color;
   };
 
   return {
