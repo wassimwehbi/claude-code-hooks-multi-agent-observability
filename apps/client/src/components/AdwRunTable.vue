@@ -46,6 +46,11 @@
           <!-- Title -->
           <td class="px-3 py-2 max-w-[250px] truncate" :title="run.issue_title || ''">
             {{ run.issue_title || run.adw_id }}
+            <span
+              v-if="run.is_ux_bug"
+              class="inline-flex items-center ml-1 px-1 py-0.5 rounded text-[10px] font-medium"
+              :style="{ color: '#8b5cf6', backgroundColor: '#8b5cf622' }"
+            >UX</span>
           </td>
           <!-- Phase stepper -->
           <td class="px-3 py-2">
@@ -68,7 +73,7 @@
           <td class="px-3 py-2 font-mono">
             <a
               v-if="run.pr_number != null"
-              :href="`${GITHUB_REPO_URL}/pull/${run.pr_number}`"
+              :href="run.pr_url || `${GITHUB_REPO_URL}/pull/${run.pr_number}`"
               target="_blank"
               rel="noopener"
               class="underline decoration-dotted hover:decoration-solid"

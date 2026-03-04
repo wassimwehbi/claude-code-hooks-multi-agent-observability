@@ -1,14 +1,16 @@
 <template>
   <div class="flex flex-wrap gap-3 p-3">
     <!-- Metric cards -->
-    <div
+    <button
       v-for="card in cards"
       :key="card.label"
-      class="flex items-center gap-2 px-3 py-2 rounded-lg border"
+      class="flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-150"
       :style="{
-        borderColor: 'var(--theme-border-secondary)',
-        backgroundColor: 'var(--theme-bg-tertiary)',
+        borderColor: activeFilter === card.filter ? card.color : 'var(--theme-border-secondary)',
+        backgroundColor: activeFilter === card.filter ? card.color + '18' : 'var(--theme-bg-tertiary)',
+        boxShadow: activeFilter === card.filter ? '0 0 0 1px ' + card.color + '44' : 'none',
       }"
+      @click="$emit('filter', activeFilter === card.filter ? null : card.filter)"
     >
       <span class="text-lg">{{ card.icon }}</span>
       <div class="flex flex-col">
@@ -21,7 +23,7 @@
           :style="{ color: card.color }"
         >{{ card.value }}</span>
       </div>
-    </div>
+    </button>
 
     <!-- Phase distribution mini bar -->
     <div
@@ -57,18 +59,25 @@ import { computed } from 'vue';
 import type { AdwStats, BugPhase } from '../types/adw';
 import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
 
+export type AdwFilter = 'active' | 'prs' | 'blocked' | 'done' | 'failed';
+
 const props = defineProps<{
   stats: AdwStats;
+  activeFilter: AdwFilter | null;
+}>();
+
+defineEmits<{
+  (e: 'filter', filter: AdwFilter | null): void;
 }>();
 
 const { getPhaseColor } = useAdwPhaseColors();
 
 const cards = computed(() => [
-  { label: 'Total', value: props.stats.total, icon: '#', color: 'var(--theme-text-primary)' },
-  { label: 'Active', value: props.stats.active, icon: '>', color: '#3b82f6' },
-  { label: 'PRs', value: props.stats.activePRs, icon: '!', color: '#10b981' },
-  { label: 'Blocked', value: props.stats.blocked, icon: '!', color: '#ef4444' },
-  { label: 'Done', value: props.stats.completed, icon: '*', color: '#22c55e' },
-  { label: 'Failed', value: props.stats.failed, icon: 'x', color: '#ef4444' },
+  { label: 'Total', value: props.stats.total, icon: '#', color: 'var(--theme-text-primary)', filter: null as AdwFilter | null },
+  { label: 'Active', value: props.stats.active, icon: '>', color: '#3b82f6', filter: 'active' as AdwFilter },
+  { label: 'PRs', value: props.stats.activePRs, icon: '!', color: '#10b981', filter: 'prs' as AdwFilter },
+  { label: 'Blocked', value: props.stats.blocked, icon: '!', color: '#ef4444', filter: 'blocked' as AdwFilter },
+  { label: 'Done', value: props.stats.completed, icon: '*', color: '#22c55e', filter: 'done' as AdwFilter },
+  { label: 'Failed', value: props.stats.failed, icon: 'x', color: '#ef4444', filter: 'failed' as AdwFilter },
 ]);
 </script>

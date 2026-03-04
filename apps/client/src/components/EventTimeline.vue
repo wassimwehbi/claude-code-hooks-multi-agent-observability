@@ -1,83 +1,68 @@
 <template>
   <div class="flex-1 mobile:h-[50vh] overflow-hidden flex flex-col">
-    <!-- Fixed Header -->
-    <div class="px-3 py-4 mobile:py-2 bg-gradient-to-r from-[var(--theme-bg-primary)] to-[var(--theme-bg-secondary)] relative z-10" style="box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3), 0 8px 25px -5px rgba(0, 0, 0, 0.2);">
-      <h2 class="text-2xl mobile:text-lg font-bold text-[var(--theme-primary)] text-center drop-shadow-sm">
-        Agent Event Stream
-      </h2>
-
-      <!-- Agent/App Tags Row -->
-      <div v-if="displayedAgentIds.length > 0" class="mt-3 flex flex-wrap gap-2 mobile:gap-1.5 justify-start">
+    <!-- Compact Header -->
+    <div class="flex items-center gap-2 px-3 py-2 bg-[var(--theme-bg-primary)] border-b relative z-10" style="border-color: var(--theme-border-secondary);">
+      <!-- Agent tags -->
+      <div v-if="displayedAgentIds.length > 0" class="flex flex-wrap gap-1.5 items-center flex-1 min-w-0">
         <button
           v-for="agentId in displayedAgentIds"
           :key="agentId"
           @click="emit('selectAgent', agentId)"
-          :class="[
-            'text-base mobile:text-sm font-bold px-3 mobile:px-2 py-1 rounded-full border-2 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105 cursor-pointer',
-            isAgentActive(agentId)
-              ? 'text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)]'
-              : 'text-[var(--theme-text-tertiary)] bg-[var(--theme-bg-tertiary)] opacity-50 hover:opacity-75'
-          ]"
+          class="text-xs font-medium font-mono px-2 py-0.5 rounded-full border cursor-pointer transition-all duration-150"
           :style="{
-            borderColor: getHexColorForApp(getAppNameFromAgentId(agentId)),
-            backgroundColor: getHexColorForApp(getAppNameFromAgentId(agentId)) + (isAgentActive(agentId) ? '33' : '1a')
+            color: getHexColorForApp(getAppNameFromAgentId(agentId)),
+            backgroundColor: getHexColorForApp(getAppNameFromAgentId(agentId)) + '22',
+            borderColor: getHexColorForApp(getAppNameFromAgentId(agentId)) + '44',
+            opacity: isAgentActive(agentId) ? 1 : 0.5,
           }"
-          :title="`${isAgentActive(agentId) ? 'Active: Click to add' : 'Sleeping: No recent events. Click to add'} ${agentId} to comparison lanes`"
+          :title="`${isAgentActive(agentId) ? 'Active' : 'Inactive'} — click to add ${agentId} to comparison lanes`"
         >
-          <span class="mr-2">{{ isAgentActive(agentId) ? '✨' : '😴' }}</span>
-          <span class="font-mono text-sm">{{ agentId }}</span>
+          {{ agentId }}
         </button>
       </div>
 
-      <!-- Search Bar -->
-      <div class="mt-3 mobile:mt-2 w-full">
-        <div class="flex items-center gap-2 mobile:gap-1">
-          <div class="relative flex-1">
-            <input
-              type="text"
-              :value="searchPattern"
-              @input="updateSearchPattern(($event.target as HTMLInputElement).value)"
-              placeholder="Search events (regex enabled)... e.g., 'tool.*error' or '^GET'"
-              :class="[
-                'w-full px-3 mobile:px-2 py-2 mobile:py-1.5 rounded-lg text-sm mobile:text-xs font-mono border-2 transition-all duration-200',
-                'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] placeholder-[var(--theme-text-quaternary)]',
-                'border-[var(--theme-border-primary)] focus:border-[var(--theme-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20',
-                searchError ? 'border-[var(--theme-accent-error)]' : ''
-              ]"
-              aria-label="Search events with regex pattern"
-            />
-            <button
-              v-if="searchPattern"
-              @click="clearSearch"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 text-[var(--theme-text-tertiary)] hover:text-[var(--theme-primary)] transition-colors duration-200"
-              title="Clear search"
-              aria-label="Clear search"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-        <div
-          v-if="searchError"
-          class="mt-1.5 mobile:mt-1 px-2 py-1.5 mobile:py-1 bg-[var(--theme-accent-error)]/10 border border-[var(--theme-accent-error)] rounded-lg text-xs mobile:text-[11px] text-[var(--theme-accent-error)] font-semibold"
-          role="alert"
+      <!-- Search input -->
+      <div class="relative w-56 mobile:w-40 shrink-0">
+        <input
+          type="text"
+          :value="searchPattern"
+          @input="updateSearchPattern(($event.target as HTMLInputElement).value)"
+          placeholder="Search (regex)..."
+          class="w-full px-2 py-1 rounded text-xs font-mono border bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] placeholder-[var(--theme-text-quaternary)] focus:outline-none transition-colors duration-150"
+          :style="{
+            borderColor: searchError ? 'var(--theme-accent-error)' : 'var(--theme-border-secondary)',
+          }"
+          aria-label="Search events with regex pattern"
+        />
+        <button
+          v-if="searchPattern"
+          @click="clearSearch"
+          class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--theme-text-tertiary)] hover:text-[var(--theme-text-primary)] text-xs transition-colors duration-150"
+          title="Clear search"
+          aria-label="Clear search"
         >
-          <span class="inline-block mr-1">⚠️</span> {{ searchError }}
-        </div>
+          ✕
+        </button>
       </div>
     </div>
-    
+
+    <!-- Search error (flat, no emoji) -->
+    <div
+      v-if="searchError"
+      class="px-3 py-1 text-xs text-[var(--theme-accent-error)] bg-[var(--theme-accent-error)]/10 border-b"
+      style="border-color: var(--theme-border-secondary);"
+      role="alert"
+    >
+      Invalid pattern: {{ searchError }}
+    </div>
+
     <!-- Scrollable Event List -->
-    <div 
+    <div
       ref="scrollContainer"
       class="flex-1 overflow-y-auto px-3 py-3 mobile:px-2 mobile:py-1.5 relative"
       @scroll="handleScroll"
     >
-      <TransitionGroup
-        name="event"
-        tag="div"
-        class="space-y-2 mobile:space-y-1.5"
-      >
+      <div>
         <EventRow
           v-for="event in filteredEvents"
           :key="`${event.id}-${event.timestamp}`"
@@ -88,12 +73,11 @@
           :app-color-class="getColorForApp(event.source_app)"
           :app-hex-color="getHexColorForApp(event.source_app)"
         />
-      </TransitionGroup>
-      
+      </div>
+
       <div v-if="filteredEvents.length === 0" class="text-center py-8 mobile:py-6 text-[var(--theme-text-tertiary)]">
-        <div class="text-4xl mobile:text-3xl mb-3">🔳</div>
-        <p class="text-lg mobile:text-base font-semibold text-[var(--theme-primary)] mb-1.5">No events to display</p>
-        <p class="text-base mobile:text-sm">Events will appear here as they are received</p>
+        <p class="text-sm font-medium text-[var(--theme-text-secondary)] mb-1">No events to display</p>
+        <p class="text-xs text-[var(--theme-text-quaternary)]">Events will appear here as they are received</p>
       </div>
     </div>
   </div>
@@ -172,10 +156,10 @@ const scrollToBottom = () => {
 
 const handleScroll = () => {
   if (!scrollContainer.value) return;
-  
+
   const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value;
   const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-  
+
   if (isAtBottom !== props.stickToBottom) {
     emit('update:stickToBottom', isAtBottom);
   }
@@ -194,23 +178,3 @@ watch(() => props.stickToBottom, (shouldStick) => {
   }
 });
 </script>
-
-<style scoped>
-.event-enter-active {
-  transition: all 0.3s ease;
-}
-
-.event-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.event-leave-active {
-  transition: all 0.3s ease;
-}
-
-.event-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
-</style>

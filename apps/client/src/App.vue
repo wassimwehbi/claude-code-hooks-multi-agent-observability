@@ -1,85 +1,81 @@
 <template>
   <div class="h-screen flex flex-col bg-[var(--theme-bg-secondary)]">
-    <!-- Header with Primary Theme Colors -->
-    <header class="short:hidden bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-primary-light)] shadow-lg border-b-2 border-[var(--theme-primary-dark)]">
-      <div class="px-3 py-4 mobile:py-1.5 mobile:px-2 flex items-center justify-between mobile:gap-2">
+    <!-- Header -->
+    <header class="short:hidden bg-[var(--theme-primary)] border-b border-[var(--theme-primary-dark)]">
+      <div class="px-3 py-2 mobile:py-1.5 mobile:px-2 flex items-center justify-between mobile:gap-2">
         <!-- Title + Tab Navigation -->
         <div class="flex items-center gap-4">
-          <h1 class="text-2xl mobile:hidden font-bold text-white drop-shadow-lg">
+          <h1 class="text-lg mobile:hidden font-bold text-white">
             Multi-Agent Observability
           </h1>
           <!-- Tab buttons -->
-          <div class="flex items-center gap-1 bg-white/10 rounded-lg p-0.5">
+          <div class="flex items-center gap-1 bg-white/10 rounded-md p-0.5">
             <button
-              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-all duration-200"
-              :class="currentView === 'events' ? 'bg-white/25 text-white shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/10'"
+              class="px-3 py-1 mobile:px-2 mobile:py-1 rounded text-sm font-medium transition-colors duration-150"
+              :class="currentView === 'events' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
               @click="currentView = 'events'"
             >
               Events
             </button>
             <button
-              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-all duration-200"
-              :class="currentView === 'adw' ? 'bg-white/25 text-white shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/10'"
+              class="px-3 py-1 mobile:px-2 mobile:py-1 rounded text-sm font-medium transition-colors duration-150"
+              :class="currentView === 'adw' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
               @click="currentView = 'adw'"
             >
               ADW Pipeline
               <span
                 v-if="adwRuns.length > 0"
-                class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-white/20"
+                class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-white/15"
               >{{ adwRuns.length }}</span>
             </button>
           </div>
         </div>
 
-        <!-- Connection Status -->
-        <div class="flex items-center mobile:space-x-1 space-x-1.5">
-          <div v-if="isConnected" class="flex items-center mobile:space-x-0.5 space-x-1.5">
-            <span class="relative flex mobile:h-2 mobile:w-2 h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full mobile:h-2 mobile:w-2 h-3 w-3 bg-green-500"></span>
+        <!-- Connection Status + Controls -->
+        <div class="flex items-center gap-2">
+          <!-- Connection indicator -->
+          <div class="flex items-center gap-1.5">
+            <span
+              class="inline-flex rounded-full w-2 h-2"
+              :class="isConnected ? 'bg-green-400' : 'bg-red-400'"
+            ></span>
+            <span class="text-xs text-white/70 font-medium mobile:hidden">
+              {{ isConnected ? 'Connected' : 'Disconnected' }}
             </span>
-            <span class="text-base mobile:text-xs text-white font-semibold drop-shadow-md mobile:hidden">Connected</span>
           </div>
-          <div v-else class="flex items-center mobile:space-x-0.5 space-x-1.5">
-            <span class="relative flex mobile:h-2 mobile:w-2 h-3 w-3">
-              <span class="relative inline-flex rounded-full mobile:h-2 mobile:w-2 h-3 w-3 bg-red-500"></span>
-            </span>
-            <span class="text-base mobile:text-xs text-white font-semibold drop-shadow-md mobile:hidden">Disconnected</span>
-          </div>
-        </div>
 
-        <!-- Event Count and Theme Toggle -->
-        <div class="flex items-center mobile:space-x-1 space-x-2">
-          <span class="text-base mobile:text-xs text-white font-semibold drop-shadow-md bg-[var(--theme-primary-dark)] mobile:px-2 mobile:py-0.5 px-3 py-1.5 rounded-full border border-white/30">
+          <!-- Event count -->
+          <span class="text-xs text-white font-medium px-2 py-0.5 rounded bg-white/15">
             {{ events.length }}
           </span>
 
           <!-- Clear Button -->
           <button
             @click="handleClearClick"
-            class="p-3 mobile:p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 border border-white/30 hover:border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl"
+            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
             title="Clear events"
           >
-            <span class="text-2xl mobile:text-base">🗑️</span>
+            Clear
           </button>
 
           <!-- Filters Toggle Button (events view only) -->
           <button
             v-if="currentView === 'events'"
             @click="showFilters = !showFilters"
-            class="p-3 mobile:p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 border border-white/30 hover:border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl"
+            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium transition-colors duration-150"
+            :class="showFilters ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'"
             :title="showFilters ? 'Hide filters' : 'Show filters'"
           >
-            <span class="text-2xl mobile:text-base">📊</span>
+            Filters
           </button>
 
           <!-- Theme Manager Button -->
           <button
             @click="handleThemeManagerClick"
-            class="p-3 mobile:p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 border border-white/30 hover:border-white/50 backdrop-blur-sm shadow-lg hover:shadow-xl"
+            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
             title="Open theme manager"
           >
-            <span class="text-2xl mobile:text-base">🎨</span>
+            Theme
           </button>
         </div>
       </div>

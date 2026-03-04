@@ -5,6 +5,24 @@ export function useEventSearch() {
   const searchPattern = ref<string>('');
   const searchError = ref<string>('');
 
+  // Cached compiled regex — recompiled only when pattern changes
+  let cachedPattern = '';
+  let cachedRegex: RegExp | null = null;
+
+  const compileRegex = (pattern: string): RegExp | null => {
+    if (!pattern || pattern.trim() === '') return null;
+    if (pattern === cachedPattern && cachedRegex) return cachedRegex;
+    try {
+      cachedRegex = new RegExp(pattern, 'i');
+      cachedPattern = pattern;
+      return cachedRegex;
+    } catch {
+      cachedRegex = null;
+      cachedPattern = '';
+      return null;
+    }
+  };
+
   // Validate regex pattern
   const validateRegex = (pattern: string): { valid: boolean; error?: string } => {
     if (!pattern || pattern.trim() === '') {
@@ -75,18 +93,11 @@ export function useEventSearch() {
       return true;
     }
 
-    const validation = validateRegex(pattern);
-    if (!validation.valid) {
-      return false;
-    }
+    const regex = compileRegex(pattern);
+    if (!regex) return false;
 
-    try {
-      const regex = new RegExp(pattern, 'i'); // Case-insensitive
-      const searchableText = getSearchableText(event);
-      return regex.test(searchableText);
-    } catch {
-      return false;
-    }
+    const searchableText = getSearchableText(event);
+    return regex.test(searchableText);
   };
 
   // Filter events by pattern
@@ -107,6 +118,8 @@ export function useEventSearch() {
 
     if (!pattern || pattern.trim() === '') {
       searchError.value = '';
+      cachedRegex = null;
+      cachedPattern = '';
       return;
     }
 
@@ -115,6 +128,8 @@ export function useEventSearch() {
       searchError.value = validation.error || 'Invalid regex pattern';
     } else {
       searchError.value = '';
+      // Pre-compile for upcoming filter calls
+      compileRegex(pattern);
     }
   };
 
@@ -122,6 +137,8 @@ export function useEventSearch() {
   const clearSearch = () => {
     searchPattern.value = '';
     searchError.value = '';
+    cachedRegex = null;
+    cachedPattern = '';
   };
 
   return {

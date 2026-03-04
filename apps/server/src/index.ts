@@ -12,6 +12,7 @@ import {
   getThemeStats
 } from './theme';
 import { scanAll, getRunDetail, getStats, startWatcher, getCachedRuns } from './adw-watcher';
+import { fetchPRSummary } from './adw-github';
 
 // Initialize database
 initDatabase();
@@ -374,6 +375,42 @@ const server = Bun.serve({
         console.error('[ADW] Spec serve error:', error);
         return new Response(JSON.stringify({ error: 'Failed to read file' }), {
           status: 500,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // GET /api/adw/pr-summary?pr=<number> - Fetch PR description from GitHub
+    if (url.pathname === '/api/adw/pr-summary' && req.method === 'GET') {
+      const prParam = url.searchParams.get('pr');
+      if (!prParam) {
+        return new Response(JSON.stringify({ error: 'Missing pr parameter' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const prNumber = parseInt(prParam, 10);
+      if (isNaN(prNumber)) {
+        return new Response(JSON.stringify({ error: 'pr must be numeric' }), {
+          status: 400,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const summary = await fetchPRSummary(prNumber);
+        return new Response(JSON.stringify(summary), {
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=120',
+          }
+        });
+      } catch (error: any) {
+        console.error('[ADW] PR summary fetch error:', error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch PR summary' }), {
+          status: 502,
           headers: { ...headers, 'Content-Type': 'application/json' }
         });
       }
