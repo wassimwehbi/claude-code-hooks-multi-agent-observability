@@ -53,7 +53,7 @@ const filteredRuns = computed(() => {
   return runs.value.filter((run) => {
     switch (activeFilter.value) {
       case 'done':
-        return run.status === 'completed' || run.status === 'pr_merged' || run.phase === 'done';
+        return run.status === 'completed' || run.status === 'pr_merged' || run.status === 'pr_closed' || run.phase === 'done';
       case 'failed':
         return run.status === 'failed';
       case 'blocked':
@@ -61,7 +61,7 @@ const filteredRuns = computed(() => {
       case 'prs':
         return run.pr_number != null && run.pr_state === 'OPEN';
       case 'active':
-        return !(run.status === 'completed' || run.status === 'pr_merged' || run.phase === 'done')
+        return !(run.status === 'completed' || run.status === 'pr_merged' || run.status === 'pr_closed' || run.phase === 'done')
           && run.status !== 'failed'
           && !run.is_blocked
           && !!run.status;

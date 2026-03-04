@@ -593,8 +593,8 @@ const getReviewStateColor = (state: string): string => {
   }
 };
 
-const filteredIssues = (issues: string[]): string[] =>
-  issues.filter((s) => s !== 'None' && s.trim() !== '');
+const filteredIssues = (issues: string[] | undefined | null): string[] =>
+  (issues ?? []).filter((s) => s !== 'None' && s.trim() !== '');
 
 // Agent modal state
 const agentModalOpen = ref(false);

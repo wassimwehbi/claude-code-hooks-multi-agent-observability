@@ -21,7 +21,7 @@ export function useAdwData() {
       }
       // The ADW pipeline uses pr_merged/pr_closed + phase=done
       // rather than a literal "completed" status
-      if (run.status === 'completed' || run.status === 'pr_merged' || run.phase === 'done') {
+      if (run.status === 'completed' || run.status === 'pr_merged' || run.status === 'pr_closed' || run.phase === 'done') {
         completed++;
       } else if (run.status === 'failed') {
         failed++;
