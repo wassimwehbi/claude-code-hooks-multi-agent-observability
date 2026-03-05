@@ -128,7 +128,7 @@
 .adw-markdown li { margin: 0.25rem 0; line-height: 1.6; color: var(--adw-text-secondary); }
 .adw-markdown li::marker { color: var(--adw-text-muted); }
 .adw-markdown code {
-  font-family: 'Aptos', ui-monospace, monospace;
+  font-family: ui-monospace, monospace;
   font-size: 0.85em;
   padding: 0.15em 0.45em;
   border-radius: 4px;

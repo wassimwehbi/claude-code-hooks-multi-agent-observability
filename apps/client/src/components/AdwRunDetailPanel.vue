@@ -29,8 +29,8 @@
       <button
         class="p-1.5 rounded-lg transition-colors flex-shrink-0 ml-2"
         style="color: var(--adw-text-muted, #505872)"
-        @mouseenter="($event.target as HTMLElement).style.background = 'var(--adw-bg-surface, #1a1f35)'"
-        @mouseleave="($event.target as HTMLElement).style.background = 'transparent'"
+        @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--adw-bg-surface, #1a1f35)'"
+        @mouseleave="($event.currentTarget as HTMLElement).style.background = 'transparent'"
         @click="$emit('close')"
         title="Close"
       >
@@ -83,8 +83,8 @@
         <button
           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono cursor-pointer transition-colors"
           style="background: var(--adw-bg-surface, #1a1f35); color: var(--adw-accent-cyan, #22d3ee); border: 1px solid var(--adw-border, #1e2640)"
-          @mouseenter="($event.target as HTMLElement).style.borderColor = 'var(--adw-accent-cyan, #22d3ee)'"
-          @mouseleave="($event.target as HTMLElement).style.borderColor = 'var(--adw-border, #1e2640)'"
+          @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--adw-accent-cyan, #22d3ee)'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = 'var(--adw-border, #1e2640)'"
           @click="openSpecModal"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
