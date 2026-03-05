@@ -21,7 +21,6 @@
           <span v-else class="font-bold text-xl" style="color: var(--adw-text-primary, #e8eaf0)">
             {{ detail.adw_id }}
           </span>
-          <AdwStatusBadge v-if="detail.status" :status="detail.status" />
         </div>
         <div class="text-sm" style="color: var(--adw-text-secondary, #8b93a8)">
           {{ detail.issue_title }}

@@ -138,18 +138,6 @@ const dotStyle = (phase: BugPhase) => {
   font-weight: 700;
 }
 
-.phase-markers {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 2px;
-}
-
-.marker {
-  font-size: 9px;
-  opacity: 0.5;
-  color: var(--adw-text-muted, var(--theme-text-tertiary));
-}
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }

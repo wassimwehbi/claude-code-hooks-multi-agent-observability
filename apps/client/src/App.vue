@@ -155,12 +155,6 @@
       {{ error }}
     </div>
     
-    <!-- Theme Manager -->
-    <ThemeManager
-      :is-open="showThemeManager"
-      @close="showThemeManager = false"
-    />
-
     <!-- Toast Notifications -->
     <ToastNotification
       v-for="(toast, index) in toasts"
@@ -184,7 +178,6 @@ import EventTimeline from './components/EventTimeline.vue';
 import FilterPanel from './components/FilterPanel.vue';
 import StickScrollButton from './components/StickScrollButton.vue';
 import LivePulseChart from './components/LivePulseChart.vue';
-import ThemeManager from './components/ThemeManager.vue';
 import ToastNotification from './components/ToastNotification.vue';
 import AgentSwimLaneContainer from './components/AgentSwimLaneContainer.vue';
 import AdwDashboard from './components/AdwDashboard.vue';
@@ -217,7 +210,6 @@ const filters = ref({
 
 // UI state
 const stickToBottom = ref(true);
-const showThemeManager = ref(false);
 const showFilters = ref(false);
 const uniqueAppNames = ref<string[]>([]); // Apps active in current time window
 const allAppNames = ref<string[]>([]); // All apps ever seen in session
@@ -276,9 +268,4 @@ const handleClearClick = () => {
   selectedAgentLanes.value = [];
 };
 
-// Debug handler for theme manager
-const handleThemeManagerClick = () => {
-  console.log('Theme manager button clicked!');
-  showThemeManager.value = true;
-};
 </script>
