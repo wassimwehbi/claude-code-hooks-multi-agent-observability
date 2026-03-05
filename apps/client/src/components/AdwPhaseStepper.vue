@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import type { BugPhase } from '../types/adw';
 import { BUG_PHASES } from '../types/adw';
 import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';

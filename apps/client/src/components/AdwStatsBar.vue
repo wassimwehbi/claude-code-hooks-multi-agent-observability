@@ -37,8 +37,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { AdwStats, BugPhase } from '../types/adw';
-import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
+import type { AdwStats } from '../types/adw';
 
 export type AdwFilter = 'active' | 'prs' | 'blocked' | 'done' | 'failed';
 
@@ -50,8 +49,6 @@ const props = defineProps<{
 defineEmits<{
   (e: 'filter', filter: AdwFilter | null): void;
 }>();
-
-const { getPhaseColor } = useAdwPhaseColors();
 
 const cards = computed(() => [
   { label: 'Total', value: props.stats.total, icon: 'hash', color: '#5b7fff', filter: null as AdwFilter | null },

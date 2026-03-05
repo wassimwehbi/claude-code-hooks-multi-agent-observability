@@ -118,7 +118,6 @@
 import { ref, computed } from 'vue';
 import type { AdwRunSummary } from '../types/adw';
 import { BUG_PHASES } from '../types/adw';
-import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
 import { GITHUB_REPO_URL } from '../config';
 
 const phaseOrder = new Map(BUG_PHASES.map((p, i) => [p, i]));
@@ -132,8 +131,6 @@ const props = defineProps<{
 defineEmits<{
   (e: 'select-run', adwId: string): void;
 }>();
-
-const { getPrStateColor } = useAdwPhaseColors();
 
 const columns = [
   { key: 'bug_number', label: 'Bug #' },

@@ -399,7 +399,6 @@
 import { h, ref, reactive, computed, watch } from 'vue';
 import type { AdwRunDetail, PRReviewFeedback } from '../types/adw';
 import { DEFAULT_CIRCUIT_BREAKER_LIMITS } from '../types/adw';
-import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
 import { renderMarkdown } from '../composables/useMarkdown';
 import { GITHUB_REPO_URL, API_BASE_URL } from '../config';
 import AdwPhaseStepper from './AdwPhaseStepper.vue';
@@ -417,7 +416,6 @@ defineEmits<{
   (e: 'close'): void;
 }>();
 
-const { getPrStateColor } = useAdwPhaseColors();
 const limits = DEFAULT_CIRCUIT_BREAKER_LIMITS;
 
 const PR_PHASES = new Set(['pr_creation', 'feedback_iteration', 'pr_monitoring', 'done']);
