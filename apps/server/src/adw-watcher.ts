@@ -1,5 +1,5 @@
 import { readdir, readFile, stat, access } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { join, basename, resolve } from 'node:path';
 import type {
   AdwRunSummary,
   AdwRunDetail,
@@ -11,8 +11,8 @@ import type {
 } from './adw-types';
 import { DEFAULT_CIRCUIT_BREAKER_LIMITS } from './adw-types';
 
-const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || './agents';
-const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || './.worktrees';
+const ADW_AGENTS_PATH = resolve(process.env.ADW_AGENTS_PATH || './agents');
+const WORKTREES_BASE = resolve(process.env.ADW_WORKTREES_PATH || './.worktrees');
 const POLL_INTERVAL_MS = 5_000;
 
 // In-memory cache of ADW run summaries
