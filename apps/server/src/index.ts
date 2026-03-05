@@ -268,7 +268,7 @@ const server = Bun.serve({
       }
 
       // Security: resolve to canonical path, then verify it's under the allowed directory
-      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+      const WORKTREES_BASE = resolve(process.env.ADW_WORKTREES_PATH || './.worktrees');
       const resolvedPath = resolve(filePath);
       if (!resolvedPath.startsWith(WORKTREES_BASE + '/')) {
         return new Response(JSON.stringify({ error: 'Path not allowed' }), {
@@ -330,8 +330,8 @@ const server = Bun.serve({
         });
       }
 
-      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
-      const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/wassim/git/workflow-designer/agents';
+      const WORKTREES_BASE = resolve(process.env.ADW_WORKTREES_PATH || './.worktrees');
+      const ADW_AGENTS_PATH = resolve(process.env.ADW_AGENTS_PATH || './agents');
 
       // Build candidate paths: try bug worktree first, then agents dir
       const candidates: string[] = [];

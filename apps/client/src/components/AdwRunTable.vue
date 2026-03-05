@@ -1,20 +1,16 @@
 <template>
   <div class="overflow-x-auto">
-    <table class="w-full text-sm" :style="{ color: 'var(--theme-text-primary)' }">
+    <table class="w-full adw-table">
       <thead>
-        <tr
-          class="border-b text-left"
-          :style="{ borderColor: 'var(--theme-border-secondary)' }"
-        >
+        <tr>
           <th
             v-for="col in columns"
             :key="col.key"
-            class="px-3 py-2 font-medium cursor-pointer select-none whitespace-nowrap"
-            :style="{ color: 'var(--theme-text-secondary)' }"
+            class="text-left cursor-pointer"
             @click="toggleSort(col.key)"
           >
             {{ col.label }}
-            <span v-if="sortKey === col.key" class="ml-0.5">{{ sortAsc ? '↑' : '↓' }}</span>
+            <span v-if="sortKey === col.key" class="ml-0.5 opacity-60">{{ sortAsc ? '↑' : '↓' }}</span>
           </th>
         </tr>
       </thead>
@@ -22,91 +18,93 @@
         <tr
           v-for="run in sortedRuns"
           :key="run.adw_id"
-          class="border-b cursor-pointer transition-colors duration-150"
-          :style="{
-            borderColor: 'var(--theme-border-tertiary)',
-          }"
-          @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--theme-bg-tertiary)'"
-          @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
+          class="cursor-pointer transition-colors duration-100"
           @click="$emit('select-run', run.adw_id)"
         >
           <!-- Bug # -->
-          <td class="px-3 py-2 font-mono font-bold">
+          <td>
             <a
               v-if="run.bug_number != null"
               :href="`${GITHUB_REPO_URL}/issues/${run.bug_number}`"
               target="_blank"
               rel="noopener"
-              class="underline decoration-dotted hover:decoration-solid"
-              :style="{ color: 'var(--theme-primary)' }"
+              class="font-mono font-bold hover:underline"
+              style="color: var(--adw-accent-cyan)"
               @click.stop
             >#{{ run.bug_number }}</a>
-            <span v-else>-</span>
+            <span v-else style="color: var(--adw-text-muted)">-</span>
           </td>
           <!-- Title -->
-          <td class="px-3 py-2 max-w-[250px] truncate" :title="run.issue_title || ''">
-            {{ run.issue_title || run.adw_id }}
-            <span
-              v-if="run.is_ux_bug"
-              class="inline-flex items-center ml-1 px-1 py-0.5 rounded text-[10px] font-medium"
-              :style="{ color: '#8b5cf6', backgroundColor: '#8b5cf622' }"
-            >UX</span>
+          <td class="max-w-[300px]">
+            <div class="flex items-center gap-2">
+              <span class="truncate" style="color: var(--adw-text-primary)">{{ run.issue_title || run.adw_id }}</span>
+              <span
+                v-if="run.is_ux_bug"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0"
+                style="color: #a78bfa; background: #a78bfa18; border: 1px solid #a78bfa33"
+              >ux</span>
+            </div>
           </td>
           <!-- Phase stepper -->
-          <td class="px-3 py-2">
+          <td>
             <AdwPhaseStepper :current-phase="run.phase" compact />
           </td>
           <!-- Status -->
-          <td class="px-3 py-2">
+          <td>
             <div class="flex items-center gap-1.5">
               <AdwStatusBadge v-if="run.status" :status="run.status" />
-              <span v-else :style="{ color: 'var(--theme-text-tertiary)' }">-</span>
+              <span v-else style="color: var(--adw-text-muted)">-</span>
               <span
                 v-if="run.is_blocked"
                 class="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                style="background-color: #ef4444"
+                style="background-color: #f87171"
                 :title="run.blockers[0] || 'Blocked'"
               />
             </div>
           </td>
           <!-- PR # -->
-          <td class="px-3 py-2 font-mono">
+          <td class="font-mono">
             <a
               v-if="run.pr_number != null"
               :href="run.pr_url || `${GITHUB_REPO_URL}/pull/${run.pr_number}`"
               target="_blank"
               rel="noopener"
-              class="underline decoration-dotted hover:decoration-solid"
-              :style="{ color: 'var(--theme-primary)' }"
+              class="hover:underline"
+              style="color: var(--adw-accent-cyan)"
               @click.stop
             >#{{ run.pr_number }}</a>
-            <span v-else>-</span>
+            <span v-else style="color: var(--adw-text-muted)">-</span>
           </td>
           <!-- PR State -->
-          <td class="px-3 py-2">
+          <td>
             <span
               v-if="run.pr_state"
-              class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
-              :style="{ color: getPrStateColor(run.pr_state), backgroundColor: getPrStateColor(run.pr_state) + '22' }"
+              class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold"
+              :style="prStateBadgeStyle(run.pr_state)"
             >
               {{ run.pr_state }}
             </span>
-            <span v-else :style="{ color: 'var(--theme-text-tertiary)' }">-</span>
+            <span v-else style="color: var(--adw-text-muted)">-</span>
           </td>
           <!-- Iterations -->
-          <td class="px-3 py-2 text-center font-mono">
-            {{ run.pr_monitoring_iterations }}
+          <td class="text-center">
+            <span
+              v-if="run.pr_monitoring_iterations > 0"
+              class="font-mono font-bold adw-font-number"
+              style="color: var(--adw-text-primary)"
+            >{{ run.pr_monitoring_iterations }}</span>
+            <span v-else style="color: var(--adw-text-muted)">&mdash;</span>
           </td>
           <!-- Last Updated -->
-          <td class="px-3 py-2 whitespace-nowrap" :style="{ color: 'var(--theme-text-tertiary)' }">
-            {{ formatRelativeTime(run.last_pr_check_at) }}
+          <td>
+            <span style="color: var(--adw-text-muted)">{{ formatRelativeTime(run.last_pr_check_at) }}</span>
           </td>
         </tr>
         <tr v-if="sortedRuns.length === 0">
           <td
             :colspan="columns.length"
-            class="px-3 py-8 text-center"
-            :style="{ color: 'var(--theme-text-tertiary)' }"
+            class="px-4 py-12 text-center"
+            style="color: var(--adw-text-muted)"
           >
             No ADW runs found
           </td>
@@ -120,7 +118,6 @@
 import { ref, computed } from 'vue';
 import type { AdwRunSummary } from '../types/adw';
 import { BUG_PHASES } from '../types/adw';
-import { useAdwPhaseColors } from '../composables/useAdwPhaseColors';
 import { GITHUB_REPO_URL } from '../config';
 
 const phaseOrder = new Map(BUG_PHASES.map((p, i) => [p, i]));
@@ -134,8 +131,6 @@ const props = defineProps<{
 defineEmits<{
   (e: 'select-run', adwId: string): void;
 }>();
-
-const { getPrStateColor } = useAdwPhaseColors();
 
 const columns = [
   { key: 'bug_number', label: 'Bug #' },
@@ -164,7 +159,6 @@ const sortedRuns = computed(() => {
   const sorted = [...props.runs].sort((a, b) => {
     const key = sortKey.value;
 
-    // Phase column: sort by pipeline ordinal instead of alphabetically
     if (key === 'phase') {
       const aIdx = a.phase != null ? (phaseOrder.get(a.phase) ?? -1) : -1;
       const bIdx = b.phase != null ? (phaseOrder.get(b.phase) ?? -1) : -1;
@@ -184,6 +178,16 @@ const sortedRuns = computed(() => {
   });
   return sorted;
 });
+
+const prStateBadgeStyle = (state: string) => {
+  const colors: Record<string, { bg: string; text: string }> = {
+    OPEN: { bg: '#34d39918', text: '#34d399' },
+    MERGED: { bg: '#a78bfa18', text: '#a78bfa' },
+    CLOSED: { bg: '#f8717118', text: '#f87171' },
+  };
+  const c = colors[state] || { bg: '#505872', text: '#8b93a8' };
+  return { backgroundColor: c.bg, color: c.text, border: `1px solid ${c.text}33` };
+};
 
 const formatRelativeTime = (iso: string | null): string => {
   if (!iso) return '-';
