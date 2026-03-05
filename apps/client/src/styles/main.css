@@ -2,56 +2,183 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Markdown rendering inside ADW panels */
-.adw-markdown h1 { font-size: 1.25rem; font-weight: 700; margin: 1rem 0 0.5rem; }
-.adw-markdown h2 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.4rem; }
-.adw-markdown h3 { font-size: 0.95rem; font-weight: 600; margin: 0.5rem 0 0.3rem; }
-.adw-markdown p { margin: 0.4rem 0; line-height: 1.6; }
-.adw-markdown ul, .adw-markdown ol { margin: 0.4rem 0; padding-left: 1.5rem; }
+/* ═══ ADW Figma Design System — global variables ═══ */
+:root {
+  --adw-bg-base: #0b0e17;
+  --adw-bg-card: #131828;
+  --adw-bg-card-hover: #1a2038;
+  --adw-bg-surface: #1a1f35;
+  --adw-bg-panel: #111625;
+  --adw-border: #1e2640;
+  --adw-border-light: #2a3354;
+  --adw-text-primary: #e8eaf0;
+  --adw-text-secondary: #8b93a8;
+  --adw-text-muted: #505872;
+  --adw-accent-blue: #5b7fff;
+  --adw-accent-green: #34d399;
+  --adw-accent-teal: #2dd4bf;
+  --adw-accent-purple: #a78bfa;
+  --adw-accent-pink: #f472b6;
+  --adw-accent-amber: #fbbf24;
+  --adw-accent-red: #f87171;
+  --adw-accent-cyan: #22d3ee;
+  --adw-font-text: 'Segoe UI Variable', 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --adw-font-number: 'Aptos', 'Calibri', 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* Override theme vars globally for dark design */
+  --theme-primary: #5b7fff;
+  --theme-primary-hover: #4a6fee;
+  --theme-primary-light: #1a2040;
+  --theme-primary-dark: #3a5fdd;
+  --theme-bg-primary: #0b0e17;
+  --theme-bg-secondary: #0b0e17;
+  --theme-bg-tertiary: #131828;
+  --theme-bg-quaternary: #1a1f35;
+  --theme-text-primary: #e8eaf0;
+  --theme-text-secondary: #8b93a8;
+  --theme-text-tertiary: #505872;
+  --theme-text-quaternary: #3a4060;
+  --theme-border-primary: #1e2640;
+  --theme-border-secondary: #1e2640;
+  --theme-border-tertiary: #2a3354;
+  --theme-accent-success: #34d399;
+  --theme-accent-warning: #fbbf24;
+  --theme-accent-error: #f87171;
+  --theme-accent-info: #5b7fff;
+  --theme-shadow: rgba(0, 0, 0, 0.6);
+  --theme-shadow-lg: rgba(0, 0, 0, 0.8);
+  --theme-hover-bg: rgba(255, 255, 255, 0.04);
+  --theme-active-bg: rgba(255, 255, 255, 0.08);
+  --theme-focus-ring: #5b7fff;
+}
+
+.adw-dashboard {
+  font-family: var(--adw-font-text);
+  background: var(--adw-bg-base);
+  color: var(--adw-text-primary);
+}
+
+.adw-font-number {
+  font-family: var(--adw-font-number);
+}
+
+.adw-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.adw-progress-track {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--adw-bg-surface);
+  overflow: hidden;
+  display: flex;
+}
+
+.adw-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adw-text-muted);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--adw-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.adw-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--adw-border);
+  vertical-align: middle;
+}
+
+.adw-table tr:hover td {
+  background: var(--adw-bg-card-hover);
+}
+
+.adw-panel-section {
+  margin-bottom: 24px;
+}
+
+.adw-panel-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--adw-text-secondary);
+  margin-bottom: 12px;
+}
+
+/* Markdown rendering — dark theme optimized */
+.adw-markdown h1 { font-size: 1.25rem; font-weight: 700; margin: 1.25rem 0 0.5rem; color: var(--adw-text-primary); }
+.adw-markdown h2 { font-size: 1.1rem; font-weight: 700; margin: 1rem 0 0.4rem; color: var(--adw-text-primary); }
+.adw-markdown h3 { font-size: 0.95rem; font-weight: 600; margin: 0.75rem 0 0.3rem; color: var(--adw-text-primary); }
+.adw-markdown p { margin: 0.5rem 0; line-height: 1.7; color: var(--adw-text-secondary); }
+.adw-markdown ul, .adw-markdown ol { margin: 0.5rem 0; padding-left: 1.5rem; }
 .adw-markdown ul { list-style: disc; }
 .adw-markdown ol { list-style: decimal; }
-.adw-markdown li { margin: 0.15rem 0; line-height: 1.5; }
+.adw-markdown li { margin: 0.25rem 0; line-height: 1.6; color: var(--adw-text-secondary); }
+.adw-markdown li::marker { color: var(--adw-text-muted); }
 .adw-markdown code {
-  font-family: ui-monospace, monospace;
+  font-family: 'Aptos', ui-monospace, monospace;
   font-size: 0.85em;
-  padding: 0.1em 0.35em;
-  border-radius: 3px;
-  background-color: var(--theme-bg-quaternary, rgba(0,0,0,0.1));
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  background-color: #1e2640;
+  color: #e2c17a;
+  border: 1px solid #2a3354;
 }
 .adw-markdown pre {
-  margin: 0.5rem 0;
-  padding: 0.75rem;
-  border-radius: 6px;
+  margin: 0.75rem 0;
+  padding: 1rem;
+  border-radius: 8px;
   overflow-x: auto;
-  background-color: var(--theme-bg-quaternary, rgba(0,0,0,0.1));
+  background-color: #0b0e17;
+  border: 1px solid #1e2640;
 }
 .adw-markdown pre code {
   padding: 0;
   background: none;
+  border: none;
+  color: var(--adw-text-secondary);
 }
 .adw-markdown a {
-  color: var(--theme-primary, #3b82f6);
+  color: var(--adw-accent-cyan);
   text-decoration: underline;
   text-decoration-style: dotted;
+  text-underline-offset: 2px;
 }
 .adw-markdown a:hover { text-decoration-style: solid; }
 .adw-markdown blockquote {
-  margin: 0.4rem 0;
-  padding-left: 0.75rem;
-  border-left: 3px solid var(--theme-border-secondary, #444);
-  color: var(--theme-text-tertiary, #999);
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--adw-border-light);
+  color: var(--adw-text-muted);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0 4px 4px 0;
 }
 .adw-markdown hr {
-  margin: 0.75rem 0;
+  margin: 1rem 0;
   border: none;
-  border-top: 1px solid var(--theme-border-tertiary, #333);
+  border-top: 1px solid var(--adw-border);
 }
-.adw-markdown strong { font-weight: 600; }
-.adw-markdown table { border-collapse: collapse; margin: 0.4rem 0; width: 100%; }
+.adw-markdown strong { font-weight: 700; color: var(--adw-text-primary); }
+.adw-markdown em { color: var(--adw-text-secondary); }
+.adw-markdown img { border-radius: 8px; max-width: 100%; margin: 0.5rem 0; }
+.adw-markdown table { border-collapse: collapse; margin: 0.5rem 0; width: 100%; }
 .adw-markdown th, .adw-markdown td {
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--theme-border-secondary, #444);
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--adw-border);
   text-align: left;
   font-size: 0.85em;
+  color: var(--adw-text-secondary);
 }
-.adw-markdown th { font-weight: 600; background-color: var(--theme-bg-tertiary, rgba(0,0,0,0.05)); }
+.adw-markdown th { font-weight: 600; background-color: var(--adw-bg-surface); color: var(--adw-text-primary); }

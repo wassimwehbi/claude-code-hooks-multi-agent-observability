@@ -1,7 +1,7 @@
 <template>
   <span
-    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
-    :style="{ backgroundColor: bgColor, color: textColor }"
+    class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+    :style="{ backgroundColor: bgColor, color: textColor, border: `1px solid ${textColor}33` }"
   >
     {{ label }}
   </span>
@@ -20,8 +20,7 @@ const { getStatusColor } = useAdwPhaseColors();
 
 const bgColor = computed(() => {
   const hex = getStatusColor(props.status);
-  // Use 20% opacity background
-  return hex + '33';
+  return hex + '18';
 });
 
 const textColor = computed(() => getStatusColor(props.status));

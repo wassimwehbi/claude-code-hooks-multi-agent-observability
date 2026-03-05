@@ -11,8 +11,8 @@ import type {
 } from './adw-types';
 import { DEFAULT_CIRCUIT_BREAKER_LIMITS } from './adw-types';
 
-const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/wassim/git/workflow-designer/agents';
-const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
+const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/nitishmeena/repos/workflow-designer/agents';
+const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/nitishmeena/repos/workflow-designer/.worktrees';
 const POLL_INTERVAL_MS = 5_000;
 
 // In-memory cache of ADW run summaries

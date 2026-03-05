@@ -1,82 +1,94 @@
 <template>
-  <div class="h-screen flex flex-col bg-[var(--theme-bg-secondary)]">
+  <div class="h-screen flex flex-col" style="background: #0b0e17; font-family: var(--adw-font-text)">
     <!-- Header -->
-    <header class="short:hidden bg-[var(--theme-primary)] border-b border-[var(--theme-primary-dark)]">
-      <div class="px-3 py-2 mobile:py-1.5 mobile:px-2 flex items-center justify-between mobile:gap-2">
+    <header
+      class="short:hidden border-b"
+      style="background: #0b0e17; border-color: #1e2640"
+    >
+      <div class="px-4 py-2.5 mobile:py-1.5 mobile:px-2 flex items-center justify-between mobile:gap-2">
         <!-- Title + Tab Navigation -->
-        <div class="flex items-center gap-4">
-          <h1 class="text-lg mobile:hidden font-bold text-white">
-            Multi-Agent Observability
-          </h1>
-          <!-- Tab buttons -->
-          <div class="flex items-center gap-1 bg-white/10 rounded-md p-0.5">
-            <button
-              class="px-3 py-1 mobile:px-2 mobile:py-1 rounded text-sm font-medium transition-colors duration-150"
-              :class="currentView === 'events' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
-              @click="currentView = 'events'"
+        <div class="flex items-center gap-5">
+          <!-- Logo -->
+          <div class="flex items-center gap-2.5">
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center"
+              style="background: #5b7fff22; border: 1px solid #5b7fff44"
             >
-              Events
-            </button>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b7fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <h1
+              class="text-base mobile:hidden font-semibold"
+              style="color: #e8eaf0"
+            >Multi-Agent Observability</h1>
+          </div>
+          <!-- Tab buttons -->
+          <div
+            class="flex items-center gap-1 rounded-lg p-0.5"
+            style="background: #131828; border: 1px solid #1e2640"
+          >
             <button
-              class="px-3 py-1 mobile:px-2 mobile:py-1 rounded text-sm font-medium transition-colors duration-150"
-              :class="currentView === 'adw' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'"
+              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-colors duration-150"
+              :style="currentView === 'events'
+                ? { background: '#1e2640', color: '#e8eaf0' }
+                : { color: '#505872' }"
+              @click="currentView = 'events'"
+            >Events</button>
+            <button
+              class="px-3 py-1.5 mobile:px-2 mobile:py-1 rounded-md text-sm font-medium transition-colors duration-150 flex items-center gap-1.5"
+              :style="currentView === 'adw'
+                ? { background: '#1e2640', color: '#e8eaf0' }
+                : { color: '#505872' }"
               @click="currentView = 'adw'"
             >
               ADW Pipeline
               <span
                 v-if="adwRuns.length > 0"
-                class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-white/15"
+                class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full"
+                style="background: #5b7fff22; color: #5b7fff"
               >{{ adwRuns.length }}</span>
             </button>
           </div>
         </div>
 
         <!-- Connection Status + Controls -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <!-- Connection indicator -->
-          <div class="flex items-center gap-1.5">
+          <div
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style="background: #131828; border: 1px solid #1e2640"
+          >
             <span
               class="inline-flex rounded-full w-2 h-2"
               :class="isConnected ? 'bg-green-400' : 'bg-red-400'"
             ></span>
-            <span class="text-xs text-white/70 font-medium mobile:hidden">
+            <span class="text-xs font-medium mobile:hidden" style="color: #8b93a8">
               {{ isConnected ? 'Connected' : 'Disconnected' }}
             </span>
+            <span class="text-xs font-bold adw-font-number" style="color: #e8eaf0">
+              {{ events.length }}
+            </span>
           </div>
-
-          <!-- Event count -->
-          <span class="text-xs text-white font-medium px-2 py-0.5 rounded bg-white/15">
-            {{ events.length }}
-          </span>
 
           <!-- Clear Button -->
           <button
             @click="handleClearClick"
-            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
+            class="p-1.5 rounded-lg transition-colors duration-150 hover:bg-white/5"
+            style="color: #505872"
             title="Clear events"
           >
-            Clear
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </button>
 
           <!-- Filters Toggle Button (events view only) -->
           <button
             v-if="currentView === 'events'"
             @click="showFilters = !showFilters"
-            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium transition-colors duration-150"
-            :class="showFilters ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'"
+            class="px-2.5 py-1 mobile:p-1 rounded-md text-xs font-medium transition-colors duration-150"
+            :style="showFilters ? { background: '#1e2640', color: '#e8eaf0' } : { color: '#505872' }"
             :title="showFilters ? 'Hide filters' : 'Show filters'"
-          >
-            Filters
-          </button>
-
-          <!-- Theme Manager Button -->
-          <button
-            @click="handleThemeManagerClick"
-            class="px-2 py-1 mobile:p-1 rounded text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors duration-150"
-            title="Open theme manager"
-          >
-            Theme
-          </button>
+          >Filters</button>
         </div>
       </div>
     </header>

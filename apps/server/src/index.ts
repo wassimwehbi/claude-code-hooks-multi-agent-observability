@@ -330,8 +330,8 @@ const server = Bun.serve({
         });
       }
 
-      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/wassim/git/workflow-designer/.worktrees';
-      const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/wassim/git/workflow-designer/agents';
+      const WORKTREES_BASE = process.env.ADW_WORKTREES_PATH || '/Users/nitishmeena/repos/workflow-designer/.worktrees';
+      const ADW_AGENTS_PATH = process.env.ADW_AGENTS_PATH || '/Users/nitishmeena/repos/workflow-designer/agents';
 
       // Build candidate paths: try bug worktree first, then agents dir
       const candidates: string[] = [];
